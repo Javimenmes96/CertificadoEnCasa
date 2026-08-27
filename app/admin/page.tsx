@@ -1,3 +1,7 @@
+import Link from "next/link";
+import StatusSelect from "./StatusSelect";
+import styles from "./admin.module.css";
+
 type Lead = {
   id: string;
   created_at: string;
@@ -12,6 +16,14 @@ type Lead = {
   reason: string | null;
   notes: string | null;
 };
+
+const leadStatuses = [
+  { value: "new", label: "Nueva" },
+  { value: "contacted", label: "Contactada" },
+  { value: "assigned", label: "Asignada" },
+  { value: "completed", label: "Completada" },
+  { value: "discarded", label: "Descartada" },
+];
 
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = { apikey: key };
@@ -54,40 +66,32 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    new: "Nueva",
-    contacted: "Contactada",
-    assigned: "Asignada",
-    completed: "Completada",
-    discarded: "Descartada",
-  };
-
-  return labels[status] || status;
-}
-
 export default async function AdminPage() {
   const { leads, error } = await getLeads();
 
   return (
     <>
-      <section className="page-hero admin-hero">
+      <section className={`page-hero ${styles.adminHero}`}>
         <div className="container">
           <span className="eyebrow">Panel interno</span>
           <h1>Solicitudes de certificados.</h1>
-          <p>Vista privada de los leads recibidos desde la web de CertificadoEnCasa.</p>
+          <p>Gestiona los clientes que llegan desde la web y cambia su estado a medida que avanzas con cada solicitud.</p>
+          <nav className={styles.adminNav} aria-label="Secciones del panel">
+            <Link href="/admin">Solicitudes de clientes</Link>
+            <Link href="/admin/tecnicos">Altas de técnicos</Link>
+          </nav>
         </div>
       </section>
 
-      <section className="section admin-section">
+      <section className={`section ${styles.adminSection}`}>
         <div className="container">
           {error ? (
             <div className="legal-notice">{error}</div>
           ) : leads.length === 0 ? (
-            <div className="admin-empty">Todavía no hay solicitudes.</div>
+            <div className={styles.empty}>Todavía no hay solicitudes.</div>
           ) : (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>Fecha</th>
@@ -103,7 +107,13 @@ export default async function AdminPage() {
                   {leads.map((lead) => (
                     <tr key={lead.id}>
                       <td>{formatDate(lead.created_at)}</td>
-                      <td><span className={`admin-status status-${lead.status}`}>{statusLabel(lead.status)}</span></td>
+                      <td>
+                        <StatusSelect
+                          value={lead.status}
+                          endpoint={`/admin/api/leads/${lead.id}`}
+                          options={leadStatuses}
+                        />
+                      </td>
                       <td><strong>{lead.name}</strong></td>
                       <td>
                         {lead.phone && <div><a href={`tel:${lead.phone}`}>{lead.phone}</a></div>}
@@ -111,11 +121,11 @@ export default async function AdminPage() {
                       </td>
                       <td>
                         <strong>{lead.property_type}</strong>
-                        {lead.surface_m2 && <div>{lead.surface_m2} m²</div>}
-                        {lead.reason && <div>{lead.reason}</div>}
+                        {lead.surface_m2 && <div className={styles.muted}>{lead.surface_m2} m²</div>}
+                        {lead.reason && <div className={styles.muted}>{lead.reason}</div>}
                       </td>
                       <td>{lead.postal_code} · {lead.municipality}</td>
-                      <td className="admin-notes">{lead.notes || "—"}</td>
+                      <td className={styles.notes}>{lead.notes || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
