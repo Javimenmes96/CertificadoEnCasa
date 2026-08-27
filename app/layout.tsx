@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import "./brand.css";
 
 export const metadata: Metadata = {
   title: "CertificadoEnCasa | Certificado energético fácil y rápido",
   description:
     "Encuentra técnicos habilitados para tramitar tu certificado de eficiencia energética en España.",
+  icons: {
+    icon: "/logo-mark.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -15,8 +19,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <header className="site-header">
           <div className="container nav-wrap">
             <Link href="/" className="brand" aria-label="CertificadoEnCasa">
-              <span className="brand-mark">CE</span>
-              <span>CertificadoEnCasa</span>
+              <img
+                src="/logo-mark.svg"
+                alt=""
+                className="brand-logo-image"
+                aria-hidden="true"
+              />
+              <span className="brand-wordmark" aria-hidden="true">
+                <span className="brand-wordmark-main">Certificado</span>
+                <span className="brand-wordmark-accent">EnCasa</span>
+              </span>
             </Link>
             <nav className="nav-links" aria-label="Navegación principal">
               <Link href="/como-funciona">Cómo funciona</Link>
