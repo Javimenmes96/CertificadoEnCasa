@@ -4,11 +4,20 @@ function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = {
     apikey: key,
     "Content-Type": "application/json",
-    Prefer: "return=minimal",
+    Prefer: "return=representation",
   };
 
   if (!key.startsWith("sb_secret_")) {
@@ -16,6 +25,99 @@ function supabaseHeaders(key: string) {
   }
 
   return headers;
+}
+
+type LeadNotification = {
+  id: string;
+  postalCode: string;
+  municipality: string;
+  propertyType: string;
+  surfaceM2: number | null;
+  reason: string;
+  notes: string;
+  name: string;
+  phone: string;
+  email: string;
+};
+
+async function sendLeadNotification(lead: LeadNotification, request: Request) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const from = process.env.LEAD_EMAIL_FROM;
+  const to = process.env.LEAD_NOTIFICATION_EMAIL || "solicitudes@certificadoencasa.com";
+
+  // Email notifications are optional: a lead must never be lost because email is unavailable.
+  if (!resendApiKey || !from || !to) {
+    return;
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+  const adminUrl = `${siteUrl.replace(/\/$/, "")}/admin`;
+
+  const location = `${lead.postalCode} · ${lead.municipality}`;
+  const property = `${lead.propertyType}${lead.surfaceM2 ? ` · ${lead.surfaceM2} m²` : ""}`;
+
+  const text = [
+    "Nueva solicitud de Certificado de Eficiencia Energética",
+    "",
+    `Cliente: ${lead.name}`,
+    `Teléfono: ${lead.phone || "—"}`,
+    `Email: ${lead.email || "—"}`,
+    `Ubicación: ${location}`,
+    `Inmueble: ${property}`,
+    `Motivo: ${lead.reason || "—"}`,
+    `Observaciones: ${lead.notes || "—"}`,
+    "",
+    `Ver solicitudes: ${adminUrl}`,
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;color:#10203f">
+      <div style="padding:22px 24px;background:#0c2f78;color:#fff;border-radius:14px 14px 0 0">
+        <div style="font-size:13px;opacity:.8">CertificadoEnCasa</div>
+        <h1 style="font-size:23px;margin:5px 0 0">Nueva solicitud de CEE</h1>
+      </div>
+      <div style="padding:24px;border:1px solid #dfe5ee;border-top:0;border-radius:0 0 14px 14px;background:#fff">
+        <table style="border-collapse:collapse;width:100%;font-size:15px">
+          <tr><td style="padding:8px 0;color:#667085;width:145px">Cliente</td><td style="padding:8px 0"><strong>${escapeHtml(lead.name)}</strong></td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Teléfono</td><td style="padding:8px 0">${escapeHtml(lead.phone || "—")}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Email</td><td style="padding:8px 0">${escapeHtml(lead.email || "—")}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Ubicación</td><td style="padding:8px 0">${escapeHtml(location)}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Inmueble</td><td style="padding:8px 0">${escapeHtml(property)}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Motivo</td><td style="padding:8px 0">${escapeHtml(lead.reason || "—")}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085;vertical-align:top">Observaciones</td><td style="padding:8px 0;white-space:pre-wrap">${escapeHtml(lead.notes || "—")}</td></tr>
+        </table>
+        <div style="margin-top:24px">
+          <a href="${escapeHtml(adminUrl)}" style="display:inline-block;background:#1677ff;color:white;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:700">Abrir panel de solicitudes</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  try {
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+        "User-Agent": "CertificadoEnCasa/1.0",
+        "Idempotency-Key": `lead-${lead.id}`,
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject: `Nueva solicitud CEE · ${lead.municipality} · ${lead.propertyType}`,
+        text,
+        html,
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const detail = await emailResponse.text();
+      console.error("Lead notification email failed:", emailResponse.status, detail);
+    }
+  } catch (error) {
+    console.error("Lead notification email failed:", error);
+  }
 }
 
 export async function POST(request: Request) {
@@ -99,6 +201,27 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "No hemos podido guardar la solicitud. Inténtalo de nuevo en unos minutos." },
       { status: 500 },
+    );
+  }
+
+  const savedRows = (await response.json()) as Array<{ id: string }>;
+  const leadId = savedRows[0]?.id;
+
+  if (leadId) {
+    await sendLeadNotification(
+      {
+        id: leadId,
+        postalCode,
+        municipality,
+        propertyType,
+        surfaceM2,
+        reason,
+        notes,
+        name,
+        phone,
+        email,
+      },
+      request,
     );
   }
 
