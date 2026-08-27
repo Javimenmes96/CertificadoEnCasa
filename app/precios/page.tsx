@@ -11,6 +11,15 @@ export default function PreciosPage() {
         </div>
       </section>
       <section className="section">
+        <div className="container" style={{ marginBottom: 30 }}>
+          <div className="panel" style={{ maxWidth: 820 }}>
+            <span className="eyebrow">Una forma diferente de trabajar</span>
+            <h2 style={{ marginTop: 16, marginBottom: 12 }}>Un modelo más justo: coste fijo 0 € en el plan Básico.</h2>
+            <p className="lead" style={{ marginBottom: 0 }}>
+              Puedes empezar sin pagar una cuota mensual y asumir costes principalmente cuando consigues trabajo a través de la plataforma.
+            </p>
+          </div>
+        </div>
         <div className="container pricing-grid">
           <article className="price-card">
             <span className="tag">Básico</span>
