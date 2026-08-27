@@ -13,21 +13,28 @@ type Lead = {
   notes: string | null;
 };
 
+function supabaseHeaders(key: string) {
+  const headers: Record<string, string> = { apikey: key };
+
+  if (!key.startsWith("sb_secret_")) {
+    headers.Authorization = `Bearer ${key}`;
+  }
+
+  return headers;
+}
+
 async function getLeads(): Promise<{ leads: Lead[]; error?: string }> {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !secretKey) {
     return { leads: [], error: "Supabase todavía no está configurado en Vercel." };
   }
 
   const response = await fetch(
     `${supabaseUrl.replace(/\/$/, "")}/rest/v1/leads?select=*&order=created_at.desc&limit=200`,
     {
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
+      headers: supabaseHeaders(secretKey),
       cache: "no-store",
     },
   );
