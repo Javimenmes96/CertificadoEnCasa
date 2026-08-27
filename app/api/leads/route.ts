@@ -4,11 +4,25 @@ function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
+function supabaseHeaders(key: string) {
+  const headers: Record<string, string> = {
+    apikey: key,
+    "Content-Type": "application/json",
+    Prefer: "return=minimal",
+  };
+
+  if (!key.startsWith("sb_secret_")) {
+    headers.Authorization = `Bearer ${key}`;
+  }
+
+  return headers;
+}
+
 export async function POST(request: Request) {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !secretKey) {
     return NextResponse.json(
       { error: "El formulario todavía no está conectado a la base de datos." },
       { status: 503 },
@@ -62,12 +76,7 @@ export async function POST(request: Request) {
 
   const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/leads`, {
     method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
+    headers: supabaseHeaders(secretKey),
     body: JSON.stringify({
       postal_code: postalCode,
       municipality,
