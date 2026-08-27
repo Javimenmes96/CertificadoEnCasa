@@ -88,7 +88,11 @@ export default function HomePage() {
               <li>Agenda y solicitudes centralizadas</li>
               <li>Planes adaptados a tu volumen</li>
             </ul>
-            <div className="hero-actions"><Link href="/precios" className="button" style={{ background: "white", color: "var(--brand-dark)", borderColor: "white" }}>Ver planes para técnicos</Link></div>
+            <div className="hero-actions">
+              <Link href="/unete-como-tecnico" className="button" style={{ background: "white", color: "var(--brand-dark)", borderColor: "white" }}>
+                Únete como técnico
+              </Link>
+            </div>
           </div>
         </div>
       </section>
