@@ -1,0 +1,39 @@
+.brand {
+  gap: 12px;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 52px;
+  height: 46px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.brand-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.brand-wordmark-main {
+  color: #071f58;
+}
+
+.brand-wordmark-accent {
+  color: #167cff;
+}
+
+@media (max-width: 560px) {
+  .brand-logo-image {
+    width: 46px;
+    height: 40px;
+  }
+
+  .brand-wordmark {
+    font-size: 18px;
+  }
+}
