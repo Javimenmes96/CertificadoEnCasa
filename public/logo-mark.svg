@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 160" role="img" aria-labelledby="title desc">
+  <title id="title">CertificadoEnCasa</title>
+  <desc id="desc">Casa azul integrada con las letras C y E, un check y una escala energética.</desc>
+  <defs>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b43c8"/>
+      <stop offset="1" stop-color="#1684ff"/>
+    </linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071f58"/>
+      <stop offset="1" stop-color="#0c4ab4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- roof / house -->
+  <path d="M24 55 91 14l67 41v27h-42V65h22L91 35 44 64v-9Z" fill="url(#blue)"/>
+  <path d="M130 28h18v28l-18-11V28Z" fill="#147cff"/>
+
+  <!-- C -->
+  <path d="M84 63H51c-20 0-35 15-35 36s15 36 35 36h35v-18H53c-10 0-18-7-18-18s8-18 18-18h31V63Z" fill="url(#navy)"/>
+
+  <!-- E -->
+  <path d="M95 61h62v18h-42v14h37v17h-37v16h43v18H95V61Z" fill="url(#blue)"/>
+
+  <!-- check -->
+  <path d="m72 103 10 10 22-27 9 8-31 37-20-20 10-8Z" fill="#0d3f9d"/>
+
+  <!-- energy scale -->
+  <g transform="translate(114 96)">
+    <path d="M0 0h18l6 5-6 5H0Z" fill="#179c37"/>
+    <path d="M0 12h25l6 5-6 5H0Z" fill="#75b82a"/>
+    <path d="M0 24h32l6 5-6 5H0Z" fill="#f0d515"/>
+    <path d="M0 36h39l6 5-6 5H0Z" fill="#f39a16"/>
+    <path d="M0 48h46l6 5-6 5H0Z" fill="#e52b1f"/>
+  </g>
+</svg>
