@@ -23,5 +23,9 @@ create index if not exists leads_status_idx on public.leads (status);
 
 alter table public.leads enable row level security;
 
--- No public policies are created deliberately.
--- The website writes and reads leads only from server-side routes using the Supabase service-role key.
+-- New Supabase projects no longer expose new public tables to the Data API automatically.
+-- Grant access only to the privileged server role used by the backend.
+grant select, insert, update, delete on table public.leads to service_role;
+
+-- No anon/authenticated grants or public RLS policies are created deliberately.
+-- The website writes and reads leads only from server-side routes using the Supabase secret key.
