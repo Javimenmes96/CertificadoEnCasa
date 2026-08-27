@@ -46,10 +46,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <strong>CertificadoEnCasa</strong>
               <p>CEE fácil, transparente y con técnicos verificados.</p>
             </div>
-            <div className="footer-links">
-              <Link href="/como-funciona">Cómo funciona</Link>
-              <Link href="/unete-como-tecnico">Únete como técnico</Link>
-              <Link href="/solicitar">Pedir certificado</Link>
+            <div className="footer-columns">
+              <div className="footer-links">
+                <Link href="/como-funciona">Cómo funciona</Link>
+                <Link href="/unete-como-tecnico">Únete como técnico</Link>
+                <Link href="/solicitar">Pedir certificado</Link>
+              </div>
+              <div className="footer-legal" aria-label="Información legal">
+                <Link href="/aviso-legal">Aviso legal</Link>
+                <Link href="/politica-de-privacidad">Política de privacidad</Link>
+                <Link href="/politica-de-cookies">Política de cookies</Link>
+              </div>
             </div>
           </div>
         </footer>
