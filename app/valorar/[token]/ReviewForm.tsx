@@ -42,7 +42,7 @@ export default function ReviewForm({ token, technicianName }: { token: string; t
       }
 
       setSubmitState("success");
-      setMessage(`Gracias. Tu valoración verificada de ${technicianName} ya se ha publicado.`);
+      setMessage(`Gracias. Tu valoración de ${technicianName} ya se ha publicado.`);
       form.reset();
     } catch (error) {
       setSubmitState("error");
@@ -113,7 +113,7 @@ export default function ReviewForm({ token, technicianName }: { token: string; t
       </div>
 
       <button className="button" type="submit" disabled={submitState === "sending" || !rating} style={{ marginTop: 22 }}>
-        {submitState === "sending" ? "Publicando…" : "Publicar valoración verificada"}
+        {submitState === "sending" ? "Publicando…" : "Publicar valoración"}
       </button>
 
       {message && submitState === "error" && (
