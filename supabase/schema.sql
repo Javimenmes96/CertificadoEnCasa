@@ -40,7 +40,23 @@ create table if not exists public.leads (
   privacy_accepted boolean not null default false,
   source text not null default 'web',
   selected_technician_id uuid references public.technician_applications(id) on delete set null,
-  technician_selected_at timestamptz
+  technician_selected_at timestamptz,
+  review_token uuid,
+  review_invited_at timestamptz,
+  review_submitted_at timestamptz
+);
+
+create table if not exists public.reviews (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  lead_id uuid not null unique references public.leads(id) on delete cascade,
+  technician_id uuid not null references public.technician_applications(id) on delete cascade,
+  reviewer_name text not null,
+  rating smallint not null check (rating between 1 and 5),
+  comment text,
+  verified boolean not null default true,
+  status text not null default 'published'
+    check (status in ('published', 'hidden'))
 );
 
 create index if not exists technician_applications_created_at_idx
@@ -56,6 +72,14 @@ create index if not exists leads_created_at_idx on public.leads (created_at desc
 create index if not exists leads_postal_code_idx on public.leads (postal_code);
 create index if not exists leads_status_idx on public.leads (status);
 create index if not exists leads_selected_technician_idx on public.leads (selected_technician_id);
+create unique index if not exists leads_review_token_unique_idx
+  on public.leads (review_token)
+  where review_token is not null;
+
+create index if not exists reviews_technician_created_idx
+  on public.reviews (technician_id, created_at desc);
+create index if not exists reviews_public_idx
+  on public.reviews (technician_id, status, verified);
 
 create or replace function public.prevent_unavailable_technician_selection()
 returns trigger
@@ -82,11 +106,46 @@ create trigger prevent_unavailable_technician_selection
 before insert or update of selected_technician_id on public.leads
 for each row execute function public.prevent_unavailable_technician_selection();
 
+create or replace function public.validate_verified_review()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  lead_status text;
+  lead_technician uuid;
+begin
+  select status, selected_technician_id
+    into lead_status, lead_technician
+  from public.leads
+  where id = new.lead_id;
+
+  if lead_status is distinct from 'completed' then
+    raise exception 'Reviews require a completed lead';
+  end if;
+
+  if lead_technician is null or lead_technician is distinct from new.technician_id then
+    raise exception 'Review technician does not match completed lead';
+  end if;
+
+  new.verified := true;
+  return new;
+end;
+$$;
+
+drop trigger if exists validate_verified_review on public.reviews;
+create trigger validate_verified_review
+before insert on public.reviews
+for each row execute function public.validate_verified_review();
+
 alter table public.technician_applications enable row level security;
 alter table public.leads enable row level security;
+alter table public.reviews enable row level security;
 
 -- The public site does not access Supabase directly. Server routes use the privileged service role.
 grant select, insert, update, delete on table public.technician_applications to service_role;
 grant select, insert, update, delete on table public.leads to service_role;
+grant select, insert, update, delete on table public.reviews to service_role;
 
 -- No anon/authenticated grants or public RLS policies are created deliberately.
