@@ -100,7 +100,7 @@ async function getReviews(id: string): Promise<PublicReview[]> {
   if (!supabaseUrl || !secretKey) return [];
 
   const response = await fetch(
-    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/reviews?select=rating,comment,reviewer_name,created_at&technician_id=eq.${encodeURIComponent(id)}&verified=eq.true&status=eq.published&order=created_at.desc&limit=30`,
+    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/reviews?select=rating,comment,reviewer_name,created_at&technician_id=eq.${encodeURIComponent(id)}&status=eq.published&order=created_at.desc&limit=30`,
     { headers: supabaseHeaders(secretKey), cache: "no-store" },
   );
 
@@ -153,7 +153,7 @@ export default async function TechnicianProfilePage({
               <p>{tecnico.city}, {tecnico.province}</p>
               {reviewAverage !== null && (
                 <p style={{ margin: "8px 0 0", fontWeight: 800 }}>
-                  ★ {reviewAverage.toFixed(1)} · {reviews.length} {reviews.length === 1 ? "valoración verificada" : "valoraciones verificadas"}
+                  ★ {reviewAverage.toFixed(1)} · {reviews.length} {reviews.length === 1 ? "valoración" : "valoraciones"}
                 </p>
               )}
               <div style={{ marginTop: 12 }}>
@@ -215,22 +215,22 @@ export default async function TechnicianProfilePage({
 
       <section className="section section-white">
         <div className="container">
-          <span className="eyebrow">Valoraciones verificadas</span>
-          <h2 style={{ marginTop: 14 }}>Opiniones de clientes reales.</h2>
+          <span className="eyebrow">Valoraciones</span>
+          <h2 style={{ marginTop: 14 }}>Opiniones de clientes.</h2>
           <p className="lead" style={{ maxWidth: 760 }}>
-            Solo mostramos opiniones vinculadas a solicitudes que constan como completadas en CertificadoEnCasa.
+            Cinco días después de una solicitud, el cliente puede valorar al técnico que eligió. Cada solicitud admite una sola valoración.
           </p>
 
           {reviews.length === 0 ? (
             <div className="panel" style={{ marginTop: 24 }}>
-              <strong>Aún no tiene valoraciones verificadas.</strong>
-              <p style={{ marginBottom: 0, color: "var(--muted)" }}>Las opiniones aparecerán aquí cuando clientes con servicios completados las publiquen.</p>
+              <strong>Aún no tiene valoraciones.</strong>
+              <p style={{ marginBottom: 0, color: "var(--muted)" }}>Las opiniones aparecerán aquí cuando los clientes las publiquen.</p>
             </div>
           ) : (
             <>
               <div className="panel" style={{ marginTop: 24, marginBottom: 18 }}>
                 <div style={{ fontSize: 34, fontWeight: 900 }}>★ {reviewAverage?.toFixed(1)}</div>
-                <div style={{ color: "var(--muted)" }}>{reviews.length} {reviews.length === 1 ? "valoración verificada" : "valoraciones verificadas"}</div>
+                <div style={{ color: "var(--muted)" }}>{reviews.length} {reviews.length === 1 ? "valoración" : "valoraciones"}</div>
               </div>
               <div style={{ display: "grid", gap: 16 }}>
                 {reviews.map((review, index) => (
@@ -242,8 +242,7 @@ export default async function TechnicianProfilePage({
                       </div>
                       <div style={{ color: "var(--muted)", fontSize: 14 }}>{formatReviewDate(review.created_at)}</div>
                     </div>
-                    {review.comment && <p style={{ marginTop: 16, marginBottom: 12 }}>{review.comment}</p>}
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#17653b" }}>✓ Servicio verificado</span>
+                    {review.comment && <p style={{ marginTop: 16, marginBottom: 0 }}>{review.comment}</p>}
                   </article>
                 ))}
               </div>
