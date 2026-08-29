@@ -1,11 +1,13 @@
 import Link from "next/link";
 import StatusSelect from "../StatusSelect";
+import AvailabilitySelect from "../AvailabilitySelect";
 import styles from "../admin.module.css";
 
 type TechnicianApplication = {
   id: string;
   created_at: string;
   status: string;
+  availability_status: string;
   name: string;
   email: string;
   phone: string;
@@ -72,7 +74,7 @@ export default async function AdminTecnicosPage() {
         <div className="container">
           <span className="eyebrow">Panel interno</span>
           <h1>Altas de técnicos.</h1>
-          <p>Revisa las solicitudes de profesionales y marca cuándo los has contactado o verificado.</p>
+          <p>Revisa las solicitudes, verifica a los profesionales y controla si pueden recibir nuevos clientes.</p>
           <nav className={styles.adminNav} aria-label="Secciones del panel">
             <Link href="/admin">Solicitudes de clientes</Link>
             <Link href="/admin/tecnicos">Altas de técnicos</Link>
@@ -93,6 +95,7 @@ export default async function AdminTecnicosPage() {
                   <tr>
                     <th>Fecha</th>
                     <th>Estado</th>
+                    <th>Disponibilidad</th>
                     <th>Técnico</th>
                     <th>Contacto</th>
                     <th>Perfil</th>
@@ -110,6 +113,12 @@ export default async function AdminTecnicosPage() {
                           value={application.status}
                           endpoint={`/admin/api/technicians/${application.id}`}
                           options={technicianStatuses}
+                        />
+                      </td>
+                      <td>
+                        <AvailabilitySelect
+                          value={application.availability_status || "available"}
+                          endpoint={`/admin/api/technicians/${application.id}`}
                         />
                       </td>
                       <td>
