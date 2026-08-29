@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import "./brand.css";
 import "./mvp.css";
+import "./marketplace.css";
 
 export const metadata: Metadata = {
   title: "CertificadoEnCasa | Certificado energético fácil y rápido",
