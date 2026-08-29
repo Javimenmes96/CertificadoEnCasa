@@ -173,7 +173,7 @@ export async function PATCH(
     return NextResponse.json({ error: "No se ha podido guardar el cambio." }, { status: 500 });
   }
 
-  if (updates.status === "verified" && technicianToNotify?.status !== "verified") {
+  if (updates.status === "verified" && technicianToNotify && technicianToNotify.status !== "verified") {
     await sendVerificationEmail({
       id,
       name: technicianToNotify.name,
