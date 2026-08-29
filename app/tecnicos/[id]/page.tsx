@@ -17,6 +17,13 @@ type PublicTechnician = {
   availability_status: AvailabilityStatus;
 };
 
+type PublicReview = {
+  rating: number;
+  comment: string | null;
+  reviewer_name: string;
+  created_at: string;
+};
+
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = { apikey: key };
   if (!key.startsWith("sb_secret_")) {
@@ -46,6 +53,14 @@ function availabilityMeta(status: AvailabilityStatus | string) {
     return { label: "Disponibilidad limitada", color: "#7a5200", background: "#fff8e6", border: "#efd18b" };
   }
   return { label: "Disponible", color: "#17653b", background: "#eff9f1", border: "#b8dec2" };
+}
+
+function formatReviewDate(value: string) {
+  return new Intl.DateTimeFormat("es-ES", {
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Madrid",
+  }).format(new Date(value));
 }
 
 async function getTechnician(id: string): Promise<PublicTechnician | null> {
@@ -79,6 +94,24 @@ async function getTechnician(id: string): Promise<PublicTechnician | null> {
   return rows[0] || null;
 }
 
+async function getReviews(id: string): Promise<PublicReview[]> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !secretKey) return [];
+
+  const response = await fetch(
+    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/reviews?select=rating,comment,reviewer_name,created_at&technician_id=eq.${encodeURIComponent(id)}&verified=eq.true&status=eq.published&order=created_at.desc&limit=30`,
+    { headers: supabaseHeaders(secretKey), cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    console.error("Public reviews fetch failed:", response.status, await response.text());
+    return [];
+  }
+
+  return await response.json() as PublicReview[];
+}
+
 export default async function TechnicianProfilePage({
   params,
   searchParams,
@@ -88,7 +121,7 @@ export default async function TechnicianProfilePage({
 }) {
   const { id } = await params;
   const queryParams = await searchParams;
-  const tecnico = await getTechnician(id);
+  const [tecnico, reviews] = await Promise.all([getTechnician(id), getReviews(id)]);
   if (!tecnico) notFound();
 
   const postalCode = firstParam(queryParams.cp).replace(/\D/g, "").slice(0, 5);
@@ -103,6 +136,9 @@ export default async function TechnicianProfilePage({
     : `/solicitar?tecnico=${tecnico.id}`;
   const availability = availabilityMeta(tecnico.availability_status);
   const unavailable = tecnico.availability_status === "unavailable";
+  const reviewAverage = reviews.length
+    ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
+    : null;
 
   return (
     <>
@@ -115,6 +151,11 @@ export default async function TechnicianProfilePage({
               <span className="eyebrow">✓ Profesional verificado</span>
               <h1 style={{ marginTop: 16 }}>{tecnico.name}</h1>
               <p>{tecnico.city}, {tecnico.province}</p>
+              {reviewAverage !== null && (
+                <p style={{ margin: "8px 0 0", fontWeight: 800 }}>
+                  ★ {reviewAverage.toFixed(1)} · {reviews.length} {reviews.length === 1 ? "valoración verificada" : "valoraciones verificadas"}
+                </p>
+              )}
               <div style={{ marginTop: 12 }}>
                 <span style={{ display: "inline-flex", padding: "6px 10px", borderRadius: 999, fontSize: 13, fontWeight: 800, color: availability.color, background: availability.background, border: `1px solid ${availability.border}` }}>
                   {availability.label}
@@ -169,6 +210,45 @@ export default async function TechnicianProfilePage({
               </>
             )}
           </aside>
+        </div>
+      </section>
+
+      <section className="section section-white">
+        <div className="container">
+          <span className="eyebrow">Valoraciones verificadas</span>
+          <h2 style={{ marginTop: 14 }}>Opiniones de clientes reales.</h2>
+          <p className="lead" style={{ maxWidth: 760 }}>
+            Solo mostramos opiniones vinculadas a solicitudes que constan como completadas en CertificadoEnCasa.
+          </p>
+
+          {reviews.length === 0 ? (
+            <div className="panel" style={{ marginTop: 24 }}>
+              <strong>Aún no tiene valoraciones verificadas.</strong>
+              <p style={{ marginBottom: 0, color: "var(--muted)" }}>Las opiniones aparecerán aquí cuando clientes con servicios completados las publiquen.</p>
+            </div>
+          ) : (
+            <>
+              <div className="panel" style={{ marginTop: 24, marginBottom: 18 }}>
+                <div style={{ fontSize: 34, fontWeight: 900 }}>★ {reviewAverage?.toFixed(1)}</div>
+                <div style={{ color: "var(--muted)" }}>{reviews.length} {reviews.length === 1 ? "valoración verificada" : "valoraciones verificadas"}</div>
+              </div>
+              <div style={{ display: "grid", gap: 16 }}>
+                {reviews.map((review, index) => (
+                  <article className="panel" key={`${review.created_at}-${index}`}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                      <div>
+                        <strong>{review.reviewer_name}</strong>
+                        <div style={{ fontSize: 18, marginTop: 4 }}>{"★".repeat(Number(review.rating))}{"☆".repeat(5 - Number(review.rating))}</div>
+                      </div>
+                      <div style={{ color: "var(--muted)", fontSize: 14 }}>{formatReviewDate(review.created_at)}</div>
+                    </div>
+                    {review.comment && <p style={{ marginTop: 16, marginBottom: 12 }}>{review.comment}</p>}
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#17653b" }}>✓ Servicio verificado</span>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </section>
     </>
