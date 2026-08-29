@@ -161,7 +161,7 @@ export default async function AdminLiquidacionesPage() {
                 <div>
                   <span className="eyebrow">Próximo ciclo</span>
                   <h2>{formatSettlementDate(nextDate)}</h2>
-                  <p>Solo se incluirán encargos pendientes cuyo quinto día natural venza como máximo ese día.</p>
+                  <p>Solo se incluirán encargos pendientes que hayan cumplido al menos 5 días completos cuando se ejecute la liquidación.</p>
                 </div>
                 <div className={styles.billingStats}>
                   <div className={styles.billingStat}><strong>{preview.length}</strong><span>Encargos previstos</span></div>

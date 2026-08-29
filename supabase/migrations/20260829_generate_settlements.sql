@@ -10,6 +10,7 @@ security definer
 set search_path = public
 as $$
 declare
+  v_today date;
   v_last_day date;
   v_cutoff timestamptz;
   v_technician_id uuid;
@@ -18,16 +19,21 @@ declare
   v_count integer;
   v_total numeric(10,2);
 begin
+  v_today := (now() at time zone 'Europe/Madrid')::date;
   v_last_day := (date_trunc('month', p_scheduled_for)::date + interval '1 month - 1 day')::date;
+
+  if p_scheduled_for <> v_today then
+    raise exception 'Settlement date must be today in Madrid';
+  end if;
 
   if extract(day from p_scheduled_for)::integer not in (10, 20)
      and p_scheduled_for <> v_last_day then
     raise exception 'Settlement date must be day 10, day 20, or the last day of the month';
   end if;
 
-  -- Incluye todos los encargos cuyo quinto día natural vence como máximo
-  -- en la fecha de liquidación, independientemente de la hora concreta.
-  v_cutoff := ((p_scheduled_for + 1)::timestamp at time zone 'Europe/Madrid');
+  -- Solo entran encargos que ya hayan cumplido sus cinco días completos
+  -- en el momento real en que se ejecuta la liquidación.
+  v_cutoff := now();
 
   for v_technician_id in
     select distinct l.selected_technician_id
@@ -35,7 +41,7 @@ begin
     where l.billing_status = 'pending'
       and l.selected_technician_id is not null
       and l.billing_eligible_at is not null
-      and l.billing_eligible_at < v_cutoff
+      and l.billing_eligible_at <= v_cutoff
       and l.billing_price_eur is not null
       and l.billing_plan_code is not null
       and l.billing_commission_percent is not null
@@ -91,7 +97,7 @@ begin
     where l.billing_status = 'pending'
       and l.selected_technician_id = v_technician_id
       and l.billing_eligible_at is not null
-      and l.billing_eligible_at < v_cutoff
+      and l.billing_eligible_at <= v_cutoff
       and l.billing_price_eur is not null
       and l.billing_plan_code is not null
       and l.billing_commission_percent is not null
