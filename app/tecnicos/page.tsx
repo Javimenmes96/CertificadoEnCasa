@@ -2,6 +2,8 @@ import Link from "next/link";
 import LocationSearchForm from "./LocationSearchForm";
 import { findPostalPlace, lookupSpanishPostalCode, normalizePlace } from "@/lib/postal";
 
+type AvailabilityStatus = "available" | "limited" | "unavailable";
+
 type PublicTechnician = {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ type PublicTechnician = {
   work_zones: string;
   travel_radius_km: number | null;
   price_from_eur: number | null;
+  availability_status: AvailabilityStatus;
 };
 
 type PageSearchParams = Promise<{
@@ -50,6 +53,16 @@ function initials(name: string) {
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || "" : value || "";
+}
+
+function availabilityMeta(status: AvailabilityStatus | string) {
+  if (status === "unavailable") {
+    return { label: "No disponible temporalmente", color: "#8b2e28", background: "#fff1ef", border: "#e5b5b1" };
+  }
+  if (status === "limited") {
+    return { label: "Disponibilidad limitada", color: "#7a5200", background: "#fff8e6", border: "#efd18b" };
+  }
+  return { label: "Disponible", color: "#17653b", background: "#eff9f1", border: "#b8dec2" };
 }
 
 function provinceMentionedAsArea(zones: string, province: string) {
@@ -103,7 +116,7 @@ async function getVerifiedTechnicians(): Promise<PublicTechnician[]> {
 
   const select = [
     "id", "name", "city", "province", "qualification", "years_experience",
-    "work_zones", "travel_radius_km", "price_from_eur",
+    "work_zones", "travel_radius_km", "price_from_eur", "availability_status",
   ].join(",");
 
   const response = await fetch(
@@ -189,41 +202,55 @@ export default async function TecnicosPage({ searchParams }: { searchParams: Pag
               <div className="location-results-heading">
                 <div>
                   <span className="eyebrow">Resultados en tu zona</span>
-                  <h2>{tecnicos.length} {tecnicos.length === 1 ? "técnico disponible" : "técnicos disponibles"} para {municipality}</h2>
+                  <h2>{tecnicos.length} {tecnicos.length === 1 ? "técnico encontrado" : "técnicos encontrados"} para {municipality}</h2>
                   {province && <p style={{ margin: 0, color: "var(--muted)" }}>{province}</p>}
                 </div>
                 <span className="location-result-badge">CP {postalCode}</span>
               </div>
 
               <div className="tech-grid">
-                {tecnicos.map((tecnico) => (
-                  <article className="tech-card" key={tecnico.id}>
-                    <div className="tech-head">
-                      <div className="avatar">{initials(tecnico.name)}</div>
-                      <div>
-                        <h3 style={{ marginBottom: 2 }}>{tecnico.name}</h3>
-                        <span style={{ color: "var(--muted)" }}>{tecnico.city}, {tecnico.province}</span>
+                {tecnicos.map((tecnico) => {
+                  const availability = availabilityMeta(tecnico.availability_status);
+                  const unavailable = tecnico.availability_status === "unavailable";
+
+                  return (
+                    <article className="tech-card" key={tecnico.id}>
+                      <div className="tech-head">
+                        <div className="avatar">{initials(tecnico.name)}</div>
+                        <div>
+                          <h3 style={{ marginBottom: 2 }}>{tecnico.name}</h3>
+                          <span style={{ color: "var(--muted)" }}>{tecnico.city}, {tecnico.province}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="verified-line">✓ Profesional verificado</div>
-                    <p style={{ color: "var(--muted)", marginTop: 14 }}>{tecnico.qualification}</p>
-                    <div className="tech-meta">
-                      {tecnico.years_experience !== null && <span className="tag">{tecnico.years_experience} años de experiencia</span>}
-                      {tecnico.travel_radius_km !== null && <span className="tag">Radio {tecnico.travel_radius_km} km</span>}
-                    </div>
-                    <p className="tech-zones"><strong>Zonas:</strong> {tecnico.work_zones}</p>
-                    <div className="tech-choice-row">
-                      <div>
-                        <span style={{ color: "var(--muted)", fontSize: 13 }}>Precio orientativo desde</span>
-                        <div className="price">{tecnico.price_from_eur !== null ? `${tecnico.price_from_eur} €` : "Consultar"}</div>
+                      <div className="verified-line">✓ Profesional verificado</div>
+                      <div style={{ marginTop: 10 }}>
+                        <span style={{ display: "inline-flex", padding: "5px 9px", borderRadius: 999, fontSize: 13, fontWeight: 800, color: availability.color, background: availability.background, border: `1px solid ${availability.border}` }}>
+                          {availability.label}
+                        </span>
                       </div>
-                      <div className="tech-choice-actions">
-                        <Link href={`/tecnicos/${tecnico.id}${locationSuffix}`} className="button button-secondary button-small">Ver perfil</Link>
-                        <Link href={`/solicitar?tecnico=${tecnico.id}&${locationQuery}`} className="button button-small">Elegir</Link>
+                      <p style={{ color: "var(--muted)", marginTop: 14 }}>{tecnico.qualification}</p>
+                      <div className="tech-meta">
+                        {tecnico.years_experience !== null && <span className="tag">{tecnico.years_experience} años de experiencia</span>}
+                        {tecnico.travel_radius_km !== null && <span className="tag">Radio {tecnico.travel_radius_km} km</span>}
                       </div>
-                    </div>
-                  </article>
-                ))}
+                      <p className="tech-zones"><strong>Zonas:</strong> {tecnico.work_zones}</p>
+                      <div className="tech-choice-row">
+                        <div>
+                          <span style={{ color: "var(--muted)", fontSize: 13 }}>Precio orientativo desde</span>
+                          <div className="price">{tecnico.price_from_eur !== null ? `${tecnico.price_from_eur} €` : "Consultar"}</div>
+                        </div>
+                        <div className="tech-choice-actions">
+                          <Link href={`/tecnicos/${tecnico.id}${locationSuffix}`} className="button button-secondary button-small">Ver perfil</Link>
+                          {unavailable ? (
+                            <span className="button button-small" aria-disabled="true" style={{ opacity: 0.5, cursor: "not-allowed" }}>No disponible</span>
+                          ) : (
+                            <Link href={`/solicitar?tecnico=${tecnico.id}&${locationQuery}`} className="button button-small">Elegir</Link>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </>
           )}
