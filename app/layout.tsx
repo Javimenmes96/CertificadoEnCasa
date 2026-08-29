@@ -37,7 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Link href="/tecnicos">Técnicos</Link>
               <Link href="/precios">Precios</Link>
               <Link href="/unete-como-tecnico">Únete como técnico</Link>
-              <Link href="/solicitar" className="button button-small">Pedir certificado</Link>
+              <Link href="/tecnicos" className="button button-small">Pedir certificado</Link>
             </nav>
           </div>
         </header>
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <div className="footer-links">
                 <Link href="/como-funciona">Cómo funciona</Link>
                 <Link href="/unete-como-tecnico">Únete como técnico</Link>
-                <Link href="/solicitar">Pedir certificado</Link>
+                <Link href="/tecnicos">Pedir certificado</Link>
               </div>
               <div className="footer-legal" aria-label="Información legal">
                 <Link href="/aviso-legal">Aviso legal</Link>

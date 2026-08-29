@@ -31,6 +31,10 @@ function initials(name: string) {
     .join("") || "T";
 }
 
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] || "" : value || "";
+}
+
 async function getTechnician(id: string): Promise<PublicTechnician | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
@@ -63,18 +67,32 @@ async function getTechnician(id: string): Promise<PublicTechnician | null> {
 
 export default async function TechnicianProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ cp?: string | string[]; municipio?: string | string[] }>;
 }) {
   const { id } = await params;
+  const queryParams = await searchParams;
   const tecnico = await getTechnician(id);
   if (!tecnico) notFound();
+
+  const postalCode = firstParam(queryParams.cp).replace(/\D/g, "").slice(0, 5);
+  const municipality = firstParam(queryParams.municipio).trim().slice(0, 100);
+  const locationParams = new URLSearchParams();
+  if (/^\d{5}$/.test(postalCode)) locationParams.set("cp", postalCode);
+  if (municipality) locationParams.set("municipio", municipality);
+  const locationQuery = locationParams.toString();
+  const backHref = locationQuery ? `/tecnicos?${locationQuery}` : "/tecnicos";
+  const chooseHref = locationQuery
+    ? `/solicitar?tecnico=${tecnico.id}&${locationQuery}`
+    : `/solicitar?tecnico=${tecnico.id}`;
 
   return (
     <>
       <section className="page-hero">
         <div className="container">
-          <Link href="/tecnicos" className="profile-back">← Volver a técnicos</Link>
+          <Link href={backHref} className="profile-back">← Volver a técnicos</Link>
           <div className="profile-title-row">
             <div className="avatar profile-avatar">{initials(tecnico.name)}</div>
             <div>
@@ -105,11 +123,17 @@ export default async function TechnicianProfilePage({
           </div>
 
           <aside className="panel profile-choice-card">
+            {locationQuery && (
+              <div className="profile-location-context">
+                <span>Inmueble</span>
+                <strong>{postalCode} · {municipality}</strong>
+              </div>
+            )}
             <span style={{ color: "var(--muted)", fontSize: 14 }}>Precio orientativo desde</span>
             <div className="profile-price">{tecnico.price_from_eur !== null ? `${tecnico.price_from_eur} €` : "Consultar"}</div>
             <p>El precio final puede variar según el inmueble, desplazamiento y condiciones concretas del servicio.</p>
-            <Link href={`/solicitar?tecnico=${tecnico.id}`} className="button profile-choose-button">Elegir este técnico</Link>
-            <p className="form-note">Al elegirlo podrás completar los datos de tu inmueble antes de enviar la solicitud.</p>
+            <Link href={chooseHref} className="button profile-choose-button">Elegir este técnico</Link>
+            <p className="form-note">Al elegirlo podrás completar el resto de datos del inmueble antes de enviar la solicitud.</p>
           </aside>
         </div>
       </section>
