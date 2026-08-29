@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { findPostalPlace, lookupSpanishPostalCode } from "@/lib/postal";
+import { deleteTechnicianAvatar, uploadTechnicianAvatar } from "@/lib/technician-avatar";
 
 function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -9,6 +10,35 @@ function optionalNumber(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isTrue(value: unknown) {
+  return value === true || value === "true";
+}
+
+async function parseRequest(request: Request) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData().catch(() => null);
+    if (!formData) return { body: null, avatarFile: null };
+
+    const body: Record<string, unknown> = {};
+    let avatarFile: File | null = null;
+
+    for (const [key, value] of formData.entries()) {
+      if (key === "avatar") {
+        if (value instanceof File && value.size > 0) avatarFile = value;
+        continue;
+      }
+      body[key] = value;
+    }
+
+    return { body, avatarFile };
+  }
+
+  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  return { body, avatarFile: null };
 }
 
 function escapeHtml(value: string) {
@@ -49,6 +79,7 @@ async function sendNotification(data: {
   travelRadiusKm: number | null;
   priceFromEur: number;
   notes: string;
+  hasAvatar: boolean;
 }, request: Request) {
   const resendApiKey = process.env.RESEND_API_KEY;
   const from = process.env.LEAD_EMAIL_FROM;
@@ -72,6 +103,7 @@ async function sendNotification(data: {
     `Zonas: ${data.workZones}`,
     `Radio: ${data.travelRadiusKm ?? "—"} km`,
     `Precio desde: ${data.priceFromEur} €`,
+    `Foto de perfil: ${data.hasAvatar ? "Sí" : "No"}`,
     "Habilitación para emitir CEE: declarada por el solicitante (pendiente de verificar)",
     `Notas: ${data.notes || "—"}`,
     "",
@@ -95,6 +127,7 @@ async function sendNotification(data: {
           <tr><td style="padding:8px 0;color:#667085">Zonas</td><td style="padding:8px 0">${escapeHtml(data.workZones)}</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Radio</td><td style="padding:8px 0">${data.travelRadiusKm ?? "—"} km</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Precio desde</td><td style="padding:8px 0"><strong>${data.priceFromEur} €</strong></td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Foto de perfil</td><td style="padding:8px 0">${data.hasAvatar ? "Adjunta" : "No adjunta"}</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Habilitación CEE</td><td style="padding:8px 0">Declarada · pendiente de verificar</td></tr>
           <tr><td style="padding:8px 0;color:#667085;vertical-align:top">Notas</td><td style="padding:8px 0;white-space:pre-wrap">${escapeHtml(data.notes || "—")}</td></tr>
         </table>
@@ -214,7 +247,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El registro todavía no está conectado a la base de datos." }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const { body, avatarFile } = await parseRequest(request);
   if (!body) {
     return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
   }
@@ -232,8 +265,8 @@ export async function POST(request: Request) {
   const professionalNumber = cleanText(body.professionalNumber, 100);
   const workZones = cleanText(body.workZones, 500);
   const notes = cleanText(body.notes, 1800);
-  const competenceDeclared = body.competenceDeclared === true;
-  const privacyAccepted = body.privacyAccepted === true;
+  const competenceDeclared = isTrue(body.competenceDeclared);
+  const privacyAccepted = isTrue(body.privacyAccepted);
 
   const parsedYears = optionalNumber(body.yearsExperience);
   const yearsExperience = parsedYears !== null && parsedYears >= 0 && parsedYears <= 70
@@ -282,11 +315,19 @@ export async function POST(request: Request) {
 
   const city = postalPlace.municipality;
   const province = postalPlace.province;
+  const id = crypto.randomUUID();
+
+  const avatarUpload = await uploadTechnicianAvatar(avatarFile, id);
+  if (avatarUpload && "error" in avatarUpload) {
+    return NextResponse.json({ error: avatarUpload.error }, { status: avatarUpload.status });
+  }
+  const avatarPath = avatarUpload?.path || null;
 
   const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/technician_applications`, {
     method: "POST",
     headers: supabaseHeaders(secretKey),
     body: JSON.stringify({
+      id,
       status: "new",
       name,
       email,
@@ -300,6 +341,7 @@ export async function POST(request: Request) {
       travel_radius_km: travelRadiusKm,
       price_from_eur: priceFromEur,
       notes: notes || null,
+      avatar_path: avatarPath,
       privacy_accepted: true,
       source: "web",
     }),
@@ -307,41 +349,38 @@ export async function POST(request: Request) {
 
   if (!response.ok) {
     console.error("Technician insert failed:", response.status, await response.text());
+    if (avatarPath) await deleteTechnicianAvatar(avatarPath);
     return NextResponse.json({ error: "No hemos podido guardar tu solicitud. Inténtalo de nuevo en unos minutos." }, { status: 500 });
   }
 
-  const savedRows = await response.json() as Array<{ id: string }>;
-  const id = savedRows[0]?.id;
-
-  if (id) {
-    await Promise.all([
-      sendNotification({
-        id,
-        name,
-        email,
-        phone,
-        postalCode,
-        city,
-        province,
-        qualification,
-        professionalNumber,
-        yearsExperience,
-        workZones,
-        travelRadiusKm,
-        priceFromEur,
-        notes,
-      }, request),
-      sendTechnicianConfirmation({
-        id,
-        name,
-        email,
-        city,
-        province,
-        workZones,
-        priceFromEur,
-      }),
-    ]);
-  }
+  await Promise.all([
+    sendNotification({
+      id,
+      name,
+      email,
+      phone,
+      postalCode,
+      city,
+      province,
+      qualification,
+      professionalNumber,
+      yearsExperience,
+      workZones,
+      travelRadiusKm,
+      priceFromEur,
+      notes,
+      hasAvatar: Boolean(avatarPath),
+    }, request),
+    sendTechnicianConfirmation({
+      id,
+      name,
+      email,
+      city,
+      province,
+      workZones,
+      priceFromEur,
+    }),
+  ]);
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }
