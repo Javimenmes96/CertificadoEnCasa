@@ -29,11 +29,13 @@ async function sendVerificationEmail({
   id,
   name,
   email,
+  setupToken,
   request,
 }: {
   id: string;
   name: string;
   email: string;
+  setupToken: string;
   request: Request;
 }) {
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -41,7 +43,9 @@ async function sendVerificationEmail({
   if (!resendApiKey || !from || !email) return;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
-  const profileUrl = `${siteUrl.replace(/\/$/, "")}/tecnicos/${id}`;
+  const baseUrl = siteUrl.replace(/\/$/, "");
+  const profileUrl = `${baseUrl}/tecnicos/${id}`;
+  const billingUrl = `${baseUrl}/configurar-pago/${setupToken}`;
 
   const text = [
     `Hola ${name},`,
@@ -49,6 +53,9 @@ async function sendVerificationEmail({
     "Tu perfil profesional en CertificadoEnCasa ha sido verificado y ya está publicado.",
     "",
     "Los clientes de las zonas que has indicado podrán encontrar tu perfil, consultar tus datos profesionales y elegirte para solicitar su certificado energético.",
+    "",
+    "Antes de empezar a gestionar encargos, configura tu plan y método de pago de forma segura con Stripe.",
+    `Configurar plan y pago: ${billingUrl}`,
     "",
     `Ver mi perfil: ${profileUrl}`,
     "",
@@ -67,8 +74,15 @@ async function sendVerificationEmail({
         <p>Hola <strong>${escapeHtml(name)}</strong>,</p>
         <p>Hemos verificado tu perfil profesional y ya está publicado en CertificadoEnCasa.</p>
         <p>Los clientes de las zonas que has indicado podrán encontrarte, consultar tu perfil y elegirte para solicitar su certificado energético.</p>
+        <div style="margin:24px 0;padding:18px;background:#f3f8f4;border-radius:12px">
+          <strong>Último paso: configura tu plan y método de pago.</strong>
+          <p style="margin:8px 0 0;color:#657168">La tarjeta se introduce directamente en Stripe. CertificadoEnCasa no almacena los datos completos de tu tarjeta.</p>
+        </div>
         <div style="margin-top:24px">
-          <a href="${escapeHtml(profileUrl)}" style="display:inline-block;background:#197a49;color:white;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:700">Ver mi perfil</a>
+          <a href="${escapeHtml(billingUrl)}" style="display:inline-block;background:#197a49;color:white;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:700">Configurar plan y pago</a>
+        </div>
+        <div style="margin-top:14px">
+          <a href="${escapeHtml(profileUrl)}" style="color:#197a49;font-weight:700">Ver mi perfil</a>
         </div>
         <p style="margin-top:22px;color:#657168">Cuando un cliente te elija, te enviaremos por email sus datos para que podáis acordar directamente la visita y las condiciones del servicio.</p>
       </div>
@@ -138,11 +152,11 @@ export async function PATCH(
     return NextResponse.json({ error: "No hay cambios válidos que guardar." }, { status: 400 });
   }
 
-  let technicianToNotify: { status: string; name: string; email: string } | null = null;
+  let technicianToNotify: { status: string; name: string; email: string; stripe_setup_token: string } | null = null;
 
   if (updates.status === "verified") {
     const currentResponse = await fetch(
-      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/technician_applications?select=status,name,email&id=eq.${encodeURIComponent(id)}&limit=1`,
+      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/technician_applications?select=status,name,email,stripe_setup_token&id=eq.${encodeURIComponent(id)}&limit=1`,
       { headers: supabaseHeaders(secretKey), cache: "no-store" },
     );
 
@@ -151,7 +165,7 @@ export async function PATCH(
       return NextResponse.json({ error: "No se ha podido comprobar el estado actual del técnico." }, { status: 500 });
     }
 
-    const rows = await currentResponse.json() as Array<{ status: string; name: string; email: string }>;
+    const rows = await currentResponse.json() as Array<{ status: string; name: string; email: string; stripe_setup_token: string }>;
     technicianToNotify = rows[0] || null;
 
     if (!technicianToNotify) {
@@ -178,6 +192,7 @@ export async function PATCH(
       id,
       name: technicianToNotify.name,
       email: technicianToNotify.email,
+      setupToken: technicianToNotify.stripe_setup_token,
       request,
     });
   }
