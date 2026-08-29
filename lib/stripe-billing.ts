@@ -43,6 +43,25 @@ export type StripeSubscription = {
   default_payment_method?: string | { id?: string } | null;
 };
 
+export type StripeInvoice = {
+  id: string;
+  status?: string | null;
+  customer?: string | StripeCustomer | null;
+  default_payment_method?: string | { id?: string } | null;
+  amount_due?: number;
+  amount_paid?: number;
+  subtotal?: number;
+  subtotal_excluding_tax?: number | null;
+  total?: number;
+  total_excluding_tax?: number | null;
+  hosted_invoice_url?: string | null;
+  invoice_pdf?: string | null;
+  metadata?: Record<string, string> | null;
+  status_transitions?: {
+    paid_at?: number | null;
+  } | null;
+};
+
 function stripeSecretKey() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("Stripe no está configurado.");
@@ -51,7 +70,11 @@ function stripeSecretKey() {
 
 async function stripeRequest<T>(
   path: string,
-  options: { method?: "GET" | "POST"; params?: Record<string, string> } = {},
+  options: {
+    method?: "GET" | "POST";
+    params?: Record<string, string>;
+    idempotencyKey?: string;
+  } = {},
 ): Promise<T> {
   const method = options.method || "GET";
   const params = new URLSearchParams(options.params || {});
@@ -64,6 +87,7 @@ async function stripeRequest<T>(
     headers: {
       Authorization: `Bearer ${stripeSecretKey()}`,
       ...(method === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+      ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
     },
     body: method === "POST" ? params.toString() : undefined,
     cache: "no-store",
@@ -154,6 +178,86 @@ export async function createTechnicianCheckoutSession(data: {
       "line_items[0][tax_rates][0]": taxRateId,
       "subscription_data[metadata][technician_id]": data.technicianId,
       "subscription_data[metadata][plan_code]": data.planCode,
+    },
+  });
+}
+
+export function createSettlementInvoice(data: {
+  settlementId: string;
+  technicianId: string;
+  customerId: string;
+  paymentMethodId: string;
+  scheduledFor: string;
+}) {
+  return stripeRequest<StripeInvoice>("/invoices", {
+    method: "POST",
+    idempotencyKey: `settlement-invoice-${data.settlementId}`,
+    params: {
+      customer: data.customerId,
+      currency: "eur",
+      collection_method: "charge_automatically",
+      auto_advance: "false",
+      default_payment_method: data.paymentMethodId,
+      description: `Liquidación de comisiones CertificadoEnCasa · ${data.scheduledFor}`,
+      "payment_settings[payment_method_types][0]": "card",
+      "metadata[settlement_id]": data.settlementId,
+      "metadata[technician_id]": data.technicianId,
+      "metadata[source]": "certificadoencasa_settlement",
+    },
+  });
+}
+
+export function createSettlementInvoiceItem(data: {
+  settlementId: string;
+  technicianId: string;
+  invoiceId: string;
+  customerId: string;
+  commissionCents: number;
+  taxRateId: string;
+  leadCount: number;
+  scheduledFor: string;
+}) {
+  return stripeRequest<{ id: string }>("/invoiceitems", {
+    method: "POST",
+    idempotencyKey: `settlement-item-${data.settlementId}`,
+    params: {
+      customer: data.customerId,
+      invoice: data.invoiceId,
+      amount: String(data.commissionCents),
+      currency: "eur",
+      tax_behavior: "exclusive",
+      "tax_rates[0]": data.taxRateId,
+      description: `Comisiones de ${data.leadCount} encargo${data.leadCount === 1 ? "" : "s"} · liquidación ${data.scheduledFor}`,
+      "metadata[settlement_id]": data.settlementId,
+      "metadata[technician_id]": data.technicianId,
+    },
+  });
+}
+
+export function getInvoice(id: string) {
+  return stripeRequest<StripeInvoice>(`/invoices/${encodeURIComponent(id)}`);
+}
+
+export function finalizeInvoice(id: string, settlementId: string) {
+  return stripeRequest<StripeInvoice>(`/invoices/${encodeURIComponent(id)}/finalize`, {
+    method: "POST",
+    idempotencyKey: `settlement-finalize-${settlementId}`,
+    params: { auto_advance: "false" },
+  });
+}
+
+export function payInvoice(
+  id: string,
+  settlementId: string,
+  paymentMethodId: string,
+  attemptNumber: number,
+) {
+  return stripeRequest<StripeInvoice>(`/invoices/${encodeURIComponent(id)}/pay`, {
+    method: "POST",
+    idempotencyKey: `settlement-pay-${settlementId}-${attemptNumber}`,
+    params: {
+      payment_method: paymentMethodId,
+      off_session: "true",
     },
   });
 }

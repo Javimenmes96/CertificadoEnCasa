@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "../admin.module.css";
+import ChargeSettlementButton from "./ChargeSettlementButton";
 import {
   formatSettlementDate,
   isEligibleBySettlementDate,
@@ -14,6 +15,15 @@ type Settlement = {
   status: string;
   lead_count: number;
   total_commission_eur: number | string;
+  tax_rate_percent: number | string | null;
+  tax_eur: number | string | null;
+  total_charge_eur: number | string | null;
+  stripe_invoice_id: string | null;
+  stripe_invoice_url: string | null;
+  stripe_invoice_pdf: string | null;
+  payment_attempts: number | null;
+  paid_at: string | null;
+  failure_message: string | null;
 };
 
 type PendingLead = {
@@ -34,6 +44,7 @@ type TechnicianSummary = {
   name: string;
   city: string;
   province: string;
+  stripe_setup_completed_at: string | null;
 };
 
 function supabaseHeaders(key: string) {
@@ -49,6 +60,10 @@ function formatEuro(value: number | string | null | undefined) {
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(Number.isFinite(amount) ? amount : 0);
+}
+
+function money(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function formatDateTime(value: string) {
@@ -69,12 +84,20 @@ function settlementStatus(value: string) {
   const labels: Record<string, string> = {
     draft: "Preparando",
     ready: "Lista para cobrar",
-    charged: "Cobrada",
+    charged: "Cobro iniciado",
     paid: "Pagada",
     failed: "Cobro fallido",
     void: "Anulada",
   };
   return labels[value] || value;
+}
+
+function expectedTax(base: number | string | null) {
+  return money(Number(base || 0) * 0.21);
+}
+
+function expectedTotal(base: number | string | null) {
+  return money(Number(base || 0) * 1.21);
 }
 
 async function getBillingData(): Promise<{
@@ -116,7 +139,7 @@ async function getBillingData(): Promise<{
 
   if (ids.length > 0) {
     const techResponse = await fetch(
-      `${baseUrl}/rest/v1/technician_applications?select=id,name,city,province&id=in.(${ids.join(",")})`,
+      `${baseUrl}/rest/v1/technician_applications?select=id,name,city,province,stripe_setup_completed_at&id=in.(${ids.join(",")})`,
       { headers: supabaseHeaders(secretKey), cache: "no-store" },
     );
 
@@ -133,7 +156,9 @@ export default async function AdminLiquidacionesPage() {
   const { settlements, pending, technicians, error } = await getBillingData();
   const nextDate = nextSettlementDate();
   const preview = pending.filter((lead) => isEligibleBySettlementDate(lead.billing_eligible_at, nextDate));
-  const previewTotal = preview.reduce((sum, lead) => sum + Number(lead.billing_commission_eur || 0), 0);
+  const previewTotal = money(preview.reduce((sum, lead) => sum + Number(lead.billing_commission_eur || 0), 0));
+  const previewTax = expectedTax(previewTotal);
+  const previewCharge = expectedTotal(previewTotal);
   const previewTechnicians = new Set(preview.map((lead) => lead.selected_technician_id).filter(Boolean)).size;
 
   return (
@@ -142,7 +167,7 @@ export default async function AdminLiquidacionesPage() {
         <div className="container">
           <span className="eyebrow">Panel interno</span>
           <h1>Liquidaciones.</h1>
-          <p>Controla qué encargos entrarán en cada ciclo y cuánto corresponde cobrar a cada técnico.</p>
+          <p>Controla qué encargos entrarán en cada ciclo, el IVA y los cobros realizados a cada técnico.</p>
           <nav className={styles.adminNav} aria-label="Secciones del panel">
             <Link href="/admin">Solicitudes de clientes</Link>
             <Link href="/admin/tecnicos">Altas de técnicos</Link>
@@ -161,17 +186,19 @@ export default async function AdminLiquidacionesPage() {
                 <div>
                   <span className="eyebrow">Próximo ciclo</span>
                   <h2>{formatSettlementDate(nextDate)}</h2>
-                  <p>Solo se incluirán encargos pendientes que hayan cumplido al menos 5 días completos cuando se ejecute la liquidación.</p>
+                  <p>
+                    Solo se incluirán encargos pendientes que hayan cumplido al menos 5 días completos. Ahora mismo entrarían {preview.length} encargos de {previewTechnicians} técnico{previewTechnicians === 1 ? "" : "s"}.
+                  </p>
                 </div>
                 <div className={styles.billingStats}>
                   <div className={styles.billingStat}><strong>{preview.length}</strong><span>Encargos previstos</span></div>
-                  <div className={styles.billingStat}><strong>{formatEuro(previewTotal)}</strong><span>Comisión prevista</span></div>
-                  <div className={styles.billingStat}><strong>{previewTechnicians}</strong><span>Técnicos</span></div>
+                  <div className={styles.billingStat}><strong>{formatEuro(previewTotal)}</strong><span>Comisión base</span></div>
+                  <div className={styles.billingStat}><strong>{formatEuro(previewCharge)}</strong><span>Total con IVA</span></div>
                 </div>
               </div>
 
               <div className="legal-notice" style={{ marginTop: 18 }}>
-                Esta pantalla calcula comisiones por encargos. Las cuotas mensuales de Premium y Plus se conectarán más adelante al sistema de suscripciones.
+                Comisiones: {formatEuro(previewTotal)} + IVA 21% ({formatEuro(previewTax)}) = <strong>{formatEuro(previewCharge)}</strong>. Las cuotas mensuales Premium y Plus se cobran por separado mediante suscripción de Stripe.
               </div>
 
               <h2 style={{ marginTop: 34 }}>Encargos previstos para la próxima liquidación</h2>
@@ -199,6 +226,9 @@ export default async function AdminLiquidacionesPage() {
                             <td>
                               <strong>{technician?.name || "Perfil no disponible"}</strong>
                               {technician && <div className={styles.muted}>{technician.city}, {technician.province}</div>}
+                              {technician && !technician.stripe_setup_completed_at && (
+                                <div className={styles.error}>Pago todavía no configurado</div>
+                              )}
                             </td>
                             <td>{formatDateTime(lead.created_at)}</td>
                             <td>{formatEuro(lead.billing_price_eur)}</td>
@@ -227,12 +257,19 @@ export default async function AdminLiquidacionesPage() {
                         <th>Técnico</th>
                         <th>Estado</th>
                         <th>Encargos</th>
-                        <th>Total comisión</th>
+                        <th>Base</th>
+                        <th>IVA</th>
+                        <th>Total</th>
+                        <th>Acción</th>
                       </tr>
                     </thead>
                     <tbody>
                       {settlements.map((settlement) => {
                         const technician = technicians.get(settlement.technician_id);
+                        const tax = settlement.tax_eur == null ? expectedTax(settlement.total_commission_eur) : Number(settlement.tax_eur);
+                        const total = settlement.total_charge_eur == null ? expectedTotal(settlement.total_commission_eur) : Number(settlement.total_charge_eur);
+                        const canCharge = ["ready", "failed", "charged"].includes(settlement.status);
+
                         return (
                           <tr key={settlement.id}>
                             <td><strong>{formatSettlementDate(settlement.scheduled_for)}</strong></td>
@@ -240,9 +277,29 @@ export default async function AdminLiquidacionesPage() {
                               <strong>{technician?.name || "Perfil no disponible"}</strong>
                               {technician && <div className={styles.muted}>{technician.city}, {technician.province}</div>}
                             </td>
-                            <td>{settlementStatus(settlement.status)}</td>
+                            <td>
+                              <strong>{settlementStatus(settlement.status)}</strong>
+                              {settlement.payment_attempts ? (
+                                <div className={styles.muted}>{settlement.payment_attempts} intento{settlement.payment_attempts === 1 ? "" : "s"}</div>
+                              ) : null}
+                              {settlement.paid_at && <div className={styles.muted}>{formatDateTime(settlement.paid_at)}</div>}
+                              {settlement.failure_message && <div className={styles.error}>{settlement.failure_message}</div>}
+                            </td>
                             <td>{settlement.lead_count}</td>
                             <td><strong>{formatEuro(settlement.total_commission_eur)}</strong></td>
+                            <td>{formatEuro(tax)}</td>
+                            <td><strong>{formatEuro(total)}</strong></td>
+                            <td>
+                              {canCharge ? (
+                                <ChargeSettlementButton settlementId={settlement.id} retry={settlement.status === "failed"} />
+                              ) : settlement.status === "paid" && settlement.stripe_invoice_url ? (
+                                <a href={settlement.stripe_invoice_url} target="_blank" rel="noreferrer" className="button" style={{ padding: "9px 12px", fontSize: 13 }}>
+                                  Ver factura
+                                </a>
+                              ) : (
+                                <span className={styles.muted}>—</span>
+                              )}
+                            </td>
                           </tr>
                         );
                       })}

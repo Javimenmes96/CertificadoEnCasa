@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSettlementDate, madridDateString } from "@/lib/settlement-cycle";
+import { chargeOutstandingSettlementsThrough } from "@/lib/settlement-charging";
 
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = {
@@ -74,12 +75,35 @@ export async function GET(request: Request) {
     0,
   );
 
-  return NextResponse.json({
-    ok: true,
-    skipped: false,
-    scheduledFor,
-    settlements: settlements.length,
-    leadCount,
-    totalCommissionEur: Math.round((totalCommissionEur + Number.EPSILON) * 100) / 100,
-  });
+  try {
+    const charging = await chargeOutstandingSettlementsThrough(scheduledFor);
+
+    return NextResponse.json({
+      ok: charging.failed === 0,
+      skipped: false,
+      scheduledFor,
+      generated: {
+        settlements: settlements.length,
+        leadCount,
+        totalCommissionEur: Math.round((totalCommissionEur + Number.EPSILON) * 100) / 100,
+      },
+      charging,
+    });
+  } catch (error) {
+    console.error("Settlement charging batch failed:", error);
+    return NextResponse.json(
+      {
+        ok: false,
+        skipped: false,
+        scheduledFor,
+        generated: {
+          settlements: settlements.length,
+          leadCount,
+          totalCommissionEur: Math.round((totalCommissionEur + Number.EPSILON) * 100) / 100,
+        },
+        error: error instanceof Error ? error.message : "No se han podido cobrar las liquidaciones.",
+      },
+      { status: 500 },
+    );
+  }
 }
