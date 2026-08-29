@@ -15,7 +15,7 @@ type PostalLookup = {
   places: PostalPlace[];
 };
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export default function TechnicianForm() {
@@ -94,7 +94,7 @@ export default function TechnicianForm() {
       }
       if (avatar.size > MAX_AVATAR_BYTES) {
         setSubmitState("error");
-        setMessage("La foto no puede superar los 2 MB.");
+        setMessage("La foto no puede superar los 4 MB.");
         return;
       }
     }
@@ -154,7 +154,7 @@ export default function TechnicianForm() {
           <label htmlFor="tech-avatar">Foto de perfil</label>
           <input id="tech-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" />
           <span className="form-note">
-            Opcional. JPG, PNG o WEBP, máximo 2 MB. Si tu perfil es verificado, esta foto se mostrará públicamente junto a tus datos profesionales.
+            Opcional. JPG, PNG o WEBP, máximo 4 MB. Si tu perfil es verificado, esta foto se mostrará públicamente junto a tus datos profesionales.
           </span>
         </div>
 

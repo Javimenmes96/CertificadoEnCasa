@@ -1,5 +1,5 @@
 const AVATAR_BUCKET = "technician-avatars";
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
 
 const EXTENSION_BY_TYPE: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -59,7 +59,7 @@ export async function uploadTechnicianAvatar(file: File | null, technicianId: st
   }
 
   if (file.size > MAX_AVATAR_BYTES) {
-    return { error: "La foto no puede superar los 2 MB.", status: 400 };
+    return { error: "La foto no puede superar los 4 MB.", status: 400 };
   }
 
   const buffer = await file.arrayBuffer();
