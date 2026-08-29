@@ -1,18 +1,86 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type SubmitState = "idle" | "sending" | "success" | "error";
+
+type PostalPlace = {
+  municipality: string;
+  province: string;
+};
+
+type PostalLookup = {
+  postalCode: string;
+  places: PostalPlace[];
+};
 
 export default function TechnicianForm() {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [places, setPlaces] = useState<PostalPlace[]>([]);
+  const [municipality, setMunicipality] = useState("");
+  const [postalLoading, setPostalLoading] = useState(false);
+  const [postalError, setPostalError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const cp = postalCode.replace(/\D/g, "").slice(0, 5);
+
+    if (cp.length !== 5) {
+      setPlaces([]);
+      setMunicipality("");
+      setPostalError("");
+      return;
+    }
+
+    setPostalLoading(true);
+    setPostalError("");
+
+    fetch(`/api/postal-code/${cp}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No hemos podido comprobar el código postal.");
+        return data as PostalLookup;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const nextPlaces = data.places || [];
+        setPlaces(nextPlaces);
+        setMunicipality(nextPlaces[0]?.municipality || "");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setPlaces([]);
+        setMunicipality("");
+        setPostalError(error instanceof Error ? error.message : "No hemos podido comprobar el código postal.");
+      })
+      .finally(() => {
+        if (!cancelled) setPostalLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [postalCode]);
+
+  const selectedPlace = useMemo(
+    () => places.find((place) => place.municipality === municipality) || null,
+    [places, municipality],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const cp = postalCode.replace(/\D/g, "").slice(0, 5);
+
+    if (!/^\d{5}$/.test(cp) || !selectedPlace) {
+      setSubmitState("error");
+      setMessage("Introduce un código postal válido y espera a que identifiquemos el municipio.");
+      return;
+    }
 
     setSubmitState("sending");
     setMessage("");
@@ -25,8 +93,9 @@ export default function TechnicianForm() {
           name: formData.get("name"),
           email: formData.get("email"),
           phone: formData.get("phone"),
-          city: formData.get("city"),
-          province: formData.get("province"),
+          postalCode: cp,
+          city: selectedPlace.municipality,
+          province: selectedPlace.province,
           qualification: formData.get("qualification"),
           professionalNumber: formData.get("professionalNumber"),
           yearsExperience: formData.get("yearsExperience"),
@@ -34,6 +103,7 @@ export default function TechnicianForm() {
           travelRadiusKm: formData.get("travelRadiusKm"),
           priceFromEur: formData.get("priceFromEur"),
           notes: formData.get("notes"),
+          competenceDeclared: formData.get("competence") === "on",
           privacyAccepted: formData.get("privacy") === "on",
           company: formData.get("company"),
         }),
@@ -47,6 +117,10 @@ export default function TechnicianForm() {
       setSubmitState("success");
       setMessage("Solicitud recibida. Revisaremos tus datos y contactaremos contigo para verificar tu perfil.");
       form.reset();
+      setPostalCode("");
+      setPlaces([]);
+      setMunicipality("");
+      setPostalError("");
     } catch (error) {
       setSubmitState("error");
       setMessage(error instanceof Error ? error.message : "Ha ocurrido un error. Inténtalo de nuevo.");
@@ -72,13 +146,55 @@ export default function TechnicianForm() {
         </div>
 
         <div className="field">
-          <label htmlFor="tech-city">Municipio base *</label>
-          <input id="tech-city" name="city" maxLength={100} placeholder="Ej. Rivas-Vaciamadrid" required />
+          <label htmlFor="tech-cp">Código postal base *</label>
+          <input
+            id="tech-cp"
+            name="postalCode"
+            inputMode="numeric"
+            pattern="[0-9]{5}"
+            maxLength={5}
+            value={postalCode}
+            onChange={(event) => setPostalCode(event.target.value.replace(/\D/g, "").slice(0, 5))}
+            placeholder="Ej. 28521"
+            autoComplete="postal-code"
+            required
+          />
         </div>
 
         <div className="field">
-          <label htmlFor="tech-province">Provincia *</label>
-          <input id="tech-province" name="province" maxLength={100} placeholder="Ej. Madrid" required />
+          <label htmlFor="tech-city">Municipio base *</label>
+          {places.length > 1 ? (
+            <select
+              id="tech-city"
+              value={municipality}
+              onChange={(event) => setMunicipality(event.target.value)}
+              required
+            >
+              {places.map((place) => (
+                <option key={`${place.municipality}-${place.province}`} value={place.municipality}>
+                  {place.municipality}{place.province ? ` · ${place.province}` : ""}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="tech-city"
+              value={postalLoading ? "Comprobando…" : selectedPlace?.municipality || ""}
+              placeholder="Se completa automáticamente"
+              readOnly
+              aria-readonly="true"
+              required
+            />
+          )}
+        </div>
+
+        <div className="field full">
+          {selectedPlace && (
+            <span className="postal-confirmation">
+              ✓ Base: CP {postalCode} · {selectedPlace.municipality}{selectedPlace.province ? `, ${selectedPlace.province}` : ""}
+            </span>
+          )}
+          {postalError && <div className="form-status error" role="alert">{postalError}</div>}
         </div>
 
         <div className="field">
@@ -88,7 +204,7 @@ export default function TechnicianForm() {
 
         <div className="field">
           <label htmlFor="tech-number">N.º colegiado / registro</label>
-          <input id="tech-number" name="professionalNumber" maxLength={100} placeholder="Opcional" />
+          <input id="tech-number" name="professionalNumber" maxLength={100} placeholder="Si dispones de él" />
         </div>
 
         <div className="field">
@@ -107,19 +223,29 @@ export default function TechnicianForm() {
           <span className="form-note">Indica municipios, provincias completas o códigos postales con precisión. Usaremos este campo para mostrar tu perfil solo a clientes de esas zonas.</span>
         </div>
 
-        <div className="field">
-          <label htmlFor="tech-price">Precio orientativo desde (€)</label>
-          <input id="tech-price" name="priceFromEur" type="number" min="0" max="10000" step="0.01" placeholder="Ej. 80" />
+        <div className="field full">
+          <label htmlFor="tech-price">Precio orientativo desde (€) *</label>
+          <input id="tech-price" name="priceFromEur" type="number" min="1" max="10000" step="0.01" placeholder="Ej. 80" required />
+          <span className="form-note">Indica un precio de partida realista. El importe final lo acuerdas directamente con el cliente según el inmueble y las condiciones del servicio.</span>
         </div>
 
         <div className="field full">
           <label htmlFor="tech-notes">Cuéntanos algo más</label>
-          <textarea id="tech-notes" name="notes" maxLength={1800} placeholder="Experiencia con CEE, disponibilidad, tipos de inmueble, etc." />
+          <textarea id="tech-notes" name="notes" maxLength={1800} placeholder="Experiencia con CEE, tipos de inmueble que sueles certificar, horarios, etc." />
         </div>
 
         <div style={{ position: "absolute", left: "-9999px" }} aria-hidden="true">
           <label htmlFor="tech-company">Empresa</label>
           <input id="tech-company" name="company" tabIndex={-1} autoComplete="off" />
+        </div>
+
+        <div className="field full">
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontWeight: 400 }}>
+            <input type="checkbox" name="competence" required style={{ width: 16, marginTop: 3 }} />
+            <span>
+              Declaro que dispongo de una titulación que me habilita para emitir Certificados de Eficiencia Energética y que facilitaré la documentación acreditativa durante la verificación. *
+            </span>
+          </label>
         </div>
 
         <div className="field full">
@@ -132,8 +258,8 @@ export default function TechnicianForm() {
         </div>
       </div>
 
-      <button className="button" type="submit" disabled={submitState === "sending"} style={{ marginTop: 22 }}>
-        {submitState === "sending" ? "Enviando…" : "Solicitar alta como técnico"}
+      <button className="button" type="submit" disabled={submitState === "sending" || postalLoading || !selectedPlace} style={{ marginTop: 22 }}>
+        {submitState === "sending" ? "Enviando…" : postalLoading ? "Comprobando ubicación…" : "Solicitar alta como técnico"}
       </button>
 
       <p className="form-note">* Campos obligatorios. La solicitud no supone la publicación automática del perfil: primero verificaremos la habilitación profesional.</p>

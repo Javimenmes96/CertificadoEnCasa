@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import { findPostalPlace, lookupSpanishPostalCode } from "@/lib/postal";
 
 function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function optionalNumber(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function escapeHtml(value: string) {
@@ -32,6 +39,7 @@ async function sendNotification(data: {
   name: string;
   email: string;
   phone: string;
+  postalCode: string;
   city: string;
   province: string;
   qualification: string;
@@ -39,7 +47,7 @@ async function sendNotification(data: {
   yearsExperience: number | null;
   workZones: string;
   travelRadiusKm: number | null;
-  priceFromEur: number | null;
+  priceFromEur: number;
   notes: string;
 }, request: Request) {
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -57,13 +65,14 @@ async function sendNotification(data: {
     `Nombre: ${data.name}`,
     `Email: ${data.email}`,
     `Teléfono: ${data.phone}`,
-    `Base: ${data.city}, ${data.province}`,
+    `Base: CP ${data.postalCode} · ${data.city}, ${data.province}`,
     `Titulación: ${data.qualification}`,
     `N.º colegiado/registro: ${data.professionalNumber || "—"}`,
     `Experiencia: ${data.yearsExperience ?? "—"} años`,
     `Zonas: ${data.workZones}`,
     `Radio: ${data.travelRadiusKm ?? "—"} km`,
-    `Precio desde: ${data.priceFromEur ?? "—"} €`,
+    `Precio desde: ${data.priceFromEur} €`,
+    "Habilitación para emitir CEE: declarada por el solicitante (pendiente de verificar)",
     `Notas: ${data.notes || "—"}`,
     "",
     `Revisar altas: ${adminUrl}`,
@@ -79,13 +88,14 @@ async function sendNotification(data: {
         <table style="border-collapse:collapse;width:100%;font-size:15px">
           <tr><td style="padding:8px 0;color:#667085;width:155px">Nombre</td><td style="padding:8px 0"><strong>${escapeHtml(data.name)}</strong></td></tr>
           <tr><td style="padding:8px 0;color:#667085">Contacto</td><td style="padding:8px 0">${escapeHtml(data.phone)} · ${escapeHtml(data.email)}</td></tr>
-          <tr><td style="padding:8px 0;color:#667085">Base</td><td style="padding:8px 0">${escapeHtml(`${data.city}, ${data.province}`)}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Base</td><td style="padding:8px 0">${escapeHtml(`CP ${data.postalCode} · ${data.city}, ${data.province}`)}</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Titulación</td><td style="padding:8px 0">${escapeHtml(data.qualification)}</td></tr>
           <tr><td style="padding:8px 0;color:#667085">N.º profesional</td><td style="padding:8px 0">${escapeHtml(data.professionalNumber || "—")}</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Experiencia</td><td style="padding:8px 0">${data.yearsExperience ?? "—"} años</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Zonas</td><td style="padding:8px 0">${escapeHtml(data.workZones)}</td></tr>
           <tr><td style="padding:8px 0;color:#667085">Radio</td><td style="padding:8px 0">${data.travelRadiusKm ?? "—"} km</td></tr>
-          <tr><td style="padding:8px 0;color:#667085">Precio desde</td><td style="padding:8px 0">${data.priceFromEur ?? "—"} €</td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Precio desde</td><td style="padding:8px 0"><strong>${data.priceFromEur} €</strong></td></tr>
+          <tr><td style="padding:8px 0;color:#667085">Habilitación CEE</td><td style="padding:8px 0">Declarada · pendiente de verificar</td></tr>
           <tr><td style="padding:8px 0;color:#667085;vertical-align:top">Notas</td><td style="padding:8px 0;white-space:pre-wrap">${escapeHtml(data.notes || "—")}</td></tr>
         </table>
         <div style="margin-top:24px">
@@ -141,32 +151,62 @@ export async function POST(request: Request) {
   const name = cleanText(body.name, 120);
   const email = cleanText(body.email, 200).toLowerCase();
   const phone = cleanText(body.phone, 30);
-  const city = cleanText(body.city, 100);
-  const province = cleanText(body.province, 100);
+  const postalCode = cleanText(body.postalCode, 5).replace(/\D/g, "");
+  const requestedCity = cleanText(body.city, 100);
   const qualification = cleanText(body.qualification, 180);
   const professionalNumber = cleanText(body.professionalNumber, 100);
   const workZones = cleanText(body.workZones, 500);
   const notes = cleanText(body.notes, 1800);
+  const competenceDeclared = body.competenceDeclared === true;
   const privacyAccepted = body.privacyAccepted === true;
 
-  const parsedYears = Number(body.yearsExperience);
-  const yearsExperience = Number.isFinite(parsedYears) && parsedYears >= 0 ? Math.round(parsedYears) : null;
-  const parsedRadius = Number(body.travelRadiusKm);
-  const travelRadiusKm = Number.isFinite(parsedRadius) && parsedRadius >= 0 ? Math.round(parsedRadius) : null;
-  const parsedPrice = Number(body.priceFromEur);
-  const priceFromEur = Number.isFinite(parsedPrice) && parsedPrice >= 0 ? Math.round(parsedPrice * 100) / 100 : null;
+  const parsedYears = optionalNumber(body.yearsExperience);
+  const yearsExperience = parsedYears !== null && parsedYears >= 0 && parsedYears <= 70
+    ? Math.round(parsedYears)
+    : null;
 
-  if (!name || !email || !phone || !city || !province || !qualification || !workZones) {
-    return NextResponse.json({ error: "Completa los campos obligatorios." }, { status: 400 });
+  const parsedRadius = optionalNumber(body.travelRadiusKm);
+  const travelRadiusKm = parsedRadius !== null && parsedRadius >= 0 && parsedRadius <= 1000
+    ? Math.round(parsedRadius)
+    : null;
+
+  const parsedPrice = optionalNumber(body.priceFromEur);
+  const priceFromEur = parsedPrice !== null && parsedPrice > 0 && parsedPrice <= 10000
+    ? Math.round(parsedPrice * 100) / 100
+    : null;
+
+  if (!name || !email || !phone || !postalCode || !requestedCity || !qualification || !workZones || priceFromEur === null) {
+    return NextResponse.json({ error: "Completa los campos obligatorios, incluido un precio orientativo válido." }, { status: 400 });
   }
 
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     return NextResponse.json({ error: "Introduce un email válido." }, { status: 400 });
   }
 
+  if (!competenceDeclared) {
+    return NextResponse.json({ error: "Debes declarar que dispones de habilitación profesional para emitir CEE." }, { status: 400 });
+  }
+
   if (!privacyAccepted) {
     return NextResponse.json({ error: "Debes aceptar la política de privacidad." }, { status: 400 });
   }
+
+  const postalLookup = await lookupSpanishPostalCode(postalCode);
+  if (!postalLookup) {
+    return NextResponse.json({ error: "No hemos encontrado ese código postal en España." }, { status: 400 });
+  }
+
+  const postalPlace = findPostalPlace(postalLookup, requestedCity);
+  if (!postalPlace) {
+    const expected = postalLookup.places.map((place) => place.municipality).join(" / ");
+    return NextResponse.json(
+      { error: `El código postal ${postalCode} no corresponde con el municipio indicado. Municipio esperado: ${expected}.` },
+      { status: 400 },
+    );
+  }
+
+  const city = postalPlace.municipality;
+  const province = postalPlace.province;
 
   const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/technician_applications`, {
     method: "POST",
@@ -204,6 +244,7 @@ export async function POST(request: Request) {
       name,
       email,
       phone,
+      postalCode,
       city,
       province,
       qualification,
