@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import TechnicianAvatar from "../../TechnicianAvatar";
 
 type AvailabilityStatus = "available" | "limited" | "unavailable";
 
@@ -30,15 +31,6 @@ function supabaseHeaders(key: string) {
     headers.Authorization = `Bearer ${key}`;
   }
   return headers;
-}
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "T";
 }
 
 function firstParam(value: string | string[] | undefined) {
@@ -146,7 +138,12 @@ export default async function TechnicianProfilePage({
         <div className="container">
           <Link href={backHref} className="profile-back">← Volver a técnicos</Link>
           <div className="profile-title-row">
-            <div className="avatar profile-avatar">{initials(tecnico.name)}</div>
+            <TechnicianAvatar
+              src={`/api/technicians/${tecnico.id}/avatar`}
+              name={tecnico.name}
+              size={88}
+              className="profile-avatar"
+            />
             <div>
               <span className="eyebrow">✓ Profesional verificado</span>
               <h1 style={{ marginTop: 16 }}>{tecnico.name}</h1>

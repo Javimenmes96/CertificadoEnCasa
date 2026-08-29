@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TechnicianAvatar from "../../TechnicianAvatar";
 import StatusSelect from "../StatusSelect";
 import AvailabilitySelect from "../AvailabilitySelect";
 import styles from "../admin.module.css";
@@ -122,6 +123,13 @@ export default async function AdminTecnicosPage() {
                         />
                       </td>
                       <td>
+                        <div style={{ marginBottom: 8 }}>
+                          <TechnicianAvatar
+                            src={`/admin/api/technicians/${application.id}/avatar`}
+                            name={application.name}
+                            size={56}
+                          />
+                        </div>
                         <strong>{application.name}</strong>
                         <div className={styles.muted}>{application.city}, {application.province}</div>
                       </td>

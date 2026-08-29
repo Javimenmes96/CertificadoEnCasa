@@ -15,6 +15,9 @@ type PostalLookup = {
   places: PostalPlace[];
 };
 
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 export default function TechnicianForm() {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
@@ -82,31 +85,33 @@ export default function TechnicianForm() {
       return;
     }
 
+    const avatar = formData.get("avatar");
+    if (avatar instanceof File && avatar.size > 0) {
+      if (!ALLOWED_AVATAR_TYPES.has(avatar.type)) {
+        setSubmitState("error");
+        setMessage("La foto debe ser JPG, PNG o WEBP.");
+        return;
+      }
+      if (avatar.size > MAX_AVATAR_BYTES) {
+        setSubmitState("error");
+        setMessage("La foto no puede superar los 2 MB.");
+        return;
+      }
+    }
+
+    formData.set("postalCode", cp);
+    formData.set("city", selectedPlace.municipality);
+    formData.set("province", selectedPlace.province);
+    formData.set("competenceDeclared", formData.get("competence") === "on" ? "true" : "false");
+    formData.set("privacyAccepted", formData.get("privacy") === "on" ? "true" : "false");
+
     setSubmitState("sending");
     setMessage("");
 
     try {
       const response = await fetch("/api/technicians", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.get("name"),
-          email: formData.get("email"),
-          phone: formData.get("phone"),
-          postalCode: cp,
-          city: selectedPlace.municipality,
-          province: selectedPlace.province,
-          qualification: formData.get("qualification"),
-          professionalNumber: formData.get("professionalNumber"),
-          yearsExperience: formData.get("yearsExperience"),
-          workZones: formData.get("workZones"),
-          travelRadiusKm: formData.get("travelRadiusKm"),
-          priceFromEur: formData.get("priceFromEur"),
-          notes: formData.get("notes"),
-          competenceDeclared: formData.get("competence") === "on",
-          privacyAccepted: formData.get("privacy") === "on",
-          company: formData.get("company"),
-        }),
+        body: formData,
       });
 
       const result = await response.json().catch(() => ({}));
@@ -143,6 +148,14 @@ export default function TechnicianForm() {
         <div className="field full">
           <label htmlFor="tech-email">Email profesional *</label>
           <input id="tech-email" name="email" type="email" autoComplete="email" maxLength={200} required />
+        </div>
+
+        <div className="field full">
+          <label htmlFor="tech-avatar">Foto de perfil</label>
+          <input id="tech-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" />
+          <span className="form-note">
+            Opcional. JPG, PNG o WEBP, máximo 2 MB. Si tu perfil es verificado, esta foto se mostrará públicamente junto a tus datos profesionales.
+          </span>
         </div>
 
         <div className="field">
@@ -252,7 +265,7 @@ export default function TechnicianForm() {
           <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontWeight: 400 }}>
             <input type="checkbox" name="privacy" required style={{ width: 16, marginTop: 3 }} />
             <span>
-              He leído y acepto la <Link href="/politica-de-privacidad" style={{ textDecoration: "underline" }}>Política de privacidad</Link> y autorizo el tratamiento de mis datos para gestionar mi solicitud de alta. *
+              He leído y acepto la <Link href="/politica-de-privacidad" style={{ textDecoration: "underline" }}>Política de privacidad</Link>, autorizo el tratamiento de mis datos para gestionar el alta y, si mi perfil es verificado, la publicación de los datos profesionales y de la foto de perfil que haya facilitado. *
             </span>
           </label>
         </div>
