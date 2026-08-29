@@ -28,13 +28,17 @@ function supabaseHeaders(key: string, prefer = "return=representation") {
   return headers;
 }
 
+type PlanCode = "basic" | "premium" | "plus";
+
 type SelectedTechnician = {
   id: string;
   name: string;
   email: string;
   city: string;
   province: string;
-  priceFromEur: number | null;
+  priceFromEur: number;
+  planCode: PlanCode;
+  planCommissionPercent: number;
 };
 
 type LeadNotification = {
@@ -51,6 +55,14 @@ type LeadNotification = {
   technician: SelectedTechnician | null;
 };
 
+function isPlanCode(value: string): value is PlanCode {
+  return value === "basic" || value === "premium" || value === "plus";
+}
+
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 async function getVerifiedTechnician(
   supabaseUrl: string,
   secretKey: string,
@@ -59,7 +71,7 @@ async function getVerifiedTechnician(
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
   const response = await fetch(
-    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/technician_applications?select=id,name,email,city,province,price_from_eur&id=eq.${encodeURIComponent(id)}&status=eq.verified&limit=1`,
+    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/technician_applications?select=id,name,email,city,province,price_from_eur,plan_code,plan_commission_percent&id=eq.${encodeURIComponent(id)}&status=eq.verified&availability_status=neq.unavailable&limit=1`,
     {
       headers: supabaseHeaders(secretKey, "return=minimal"),
       cache: "no-store",
@@ -77,11 +89,27 @@ async function getVerifiedTechnician(
     email: string;
     city: string;
     province: string;
-    price_from_eur: number | null;
+    price_from_eur: number | string | null;
+    plan_code: string;
+    plan_commission_percent: number | string;
   }>;
 
   const row = rows[0];
-  if (!row) return null;
+  if (!row || !isPlanCode(row.plan_code)) return null;
+
+  const priceFromEur = Number(row.price_from_eur);
+  const planCommissionPercent = Number(row.plan_commission_percent);
+
+  if (
+    !Number.isFinite(priceFromEur)
+    || priceFromEur <= 0
+    || !Number.isFinite(planCommissionPercent)
+    || planCommissionPercent < 0
+    || planCommissionPercent > 100
+  ) {
+    console.error("Selected technician has invalid billing configuration:", row.id);
+    return null;
+  }
 
   return {
     id: row.id,
@@ -89,7 +117,9 @@ async function getVerifiedTechnician(
     email: row.email,
     city: row.city,
     province: row.province,
-    priceFromEur: row.price_from_eur,
+    priceFromEur: roundCurrency(priceFromEur),
+    planCode: row.plan_code,
+    planCommissionPercent: roundCurrency(planCommissionPercent),
   };
 }
 
@@ -332,6 +362,14 @@ export async function POST(request: Request) {
     }
   }
 
+  const technicianSelectedAt = technician ? new Date() : null;
+  const billingCommissionEur = technician
+    ? roundCurrency(technician.priceFromEur * technician.planCommissionPercent / 100)
+    : null;
+  const billingEligibleAt = technicianSelectedAt
+    ? new Date(technicianSelectedAt.getTime() + 5 * 24 * 60 * 60 * 1000)
+    : null;
+
   const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/leads`, {
     method: "POST",
     headers: supabaseHeaders(secretKey),
@@ -349,7 +387,13 @@ export async function POST(request: Request) {
       source: "web",
       status: "new",
       selected_technician_id: technician?.id || null,
-      technician_selected_at: technician ? new Date().toISOString() : null,
+      technician_selected_at: technicianSelectedAt?.toISOString() || null,
+      billing_status: technician ? "pending" : "not_applicable",
+      billing_price_eur: technician?.priceFromEur ?? null,
+      billing_plan_code: technician?.planCode ?? null,
+      billing_commission_percent: technician?.planCommissionPercent ?? null,
+      billing_commission_eur: billingCommissionEur,
+      billing_eligible_at: billingEligibleAt?.toISOString() || null,
     }),
   });
 
