@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TechnicianAvatar from "../TechnicianAvatar";
 import LocationSearchForm from "./LocationSearchForm";
 import { findPostalPlace, lookupSpanishPostalCode, normalizePlace } from "@/lib/postal";
 
@@ -40,15 +41,6 @@ function supabaseHeaders(key: string) {
   const headers: Record<string, string> = { apikey: key };
   if (!key.startsWith("sb_secret_")) headers.Authorization = `Bearer ${key}`;
   return headers;
-}
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "T";
 }
 
 function firstParam(value: string | string[] | undefined) {
@@ -216,7 +208,10 @@ export default async function TecnicosPage({ searchParams }: { searchParams: Pag
                   return (
                     <article className="tech-card" key={tecnico.id}>
                       <div className="tech-head">
-                        <div className="avatar">{initials(tecnico.name)}</div>
+                        <TechnicianAvatar
+                          src={`/api/technicians/${tecnico.id}/avatar`}
+                          name={tecnico.name}
+                        />
                         <div>
                           <h3 style={{ marginBottom: 2 }}>{tecnico.name}</h3>
                           <span style={{ color: "var(--muted)" }}>{tecnico.city}, {tecnico.province}</span>
