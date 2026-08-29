@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HomePostalSearch from "./HomePostalSearch";
 
 export default function HomePage() {
   return (
@@ -12,17 +13,7 @@ export default function HomePage() {
               Indica dónde está el inmueble, compara profesionales verificados que trabajen en esa zona y elige tú mismo con quién quieres hacerlo.
             </p>
 
-            <form action="/tecnicos" method="get" className="hero-location-search">
-              <div className="field">
-                <label htmlFor="home-cp">Código postal *</label>
-                <input id="home-cp" name="cp" inputMode="numeric" pattern="[0-9]{5}" maxLength={5} placeholder="28001" required />
-              </div>
-              <div className="field hero-location-municipality">
-                <label htmlFor="home-municipio">Municipio *</label>
-                <input id="home-municipio" name="municipio" maxLength={100} placeholder="Ej. Rivas-Vaciamadrid" required />
-              </div>
-              <button type="submit" className="button">Ver técnicos disponibles</button>
-            </form>
+            <HomePostalSearch />
 
             <div className="hero-actions hero-secondary-actions">
               <Link href="/como-funciona" className="button button-secondary">Cómo funciona</Link>
@@ -54,7 +45,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="quote-box">
-              <div className="quote-row"><span>1. Indica código postal y municipio</span><strong>Tu zona</strong></div>
+              <div className="quote-row"><span>1. Indica el código postal</span><strong>Tu zona</strong></div>
               <div className="quote-row"><span>2. Compara perfiles verificados</span><strong>Precio y experiencia</strong></div>
               <div className="quote-row"><span>3. Elige al que prefieras</span><strong>Tú decides</strong></div>
             </div>
@@ -70,7 +61,7 @@ export default function HomePage() {
             <p>Sin asignarte un técnico al azar.</p>
           </div>
           <div className="grid-3">
-            <article className="card"><div className="card-number">1</div><h3>Indica la ubicación</h3><p>Con el código postal y municipio buscamos profesionales que hayan indicado trabajar en esa zona.</p></article>
+            <article className="card"><div className="card-number">1</div><h3>Indica la ubicación</h3><p>Escribe el código postal del inmueble y nosotros identificamos el municipio para mostrarte profesionales que trabajen en esa zona.</p></article>
             <article className="card"><div className="card-number">2</div><h3>Compara y elige</h3><p>Consulta técnicos verificados, precio orientativo, experiencia y zona de servicio antes de decidir.</p></article>
             <article className="card"><div className="card-number">3</div><h3>Visita y certificado</h3><p>El técnico elegido recibe tu solicitud, contacta contigo y acuerda directamente la visita y las condiciones del servicio.</p></article>
           </div>
