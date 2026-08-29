@@ -102,8 +102,66 @@
   margin-top: 6px;
 }
 
+.billingIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+  gap: 28px;
+  align-items: center;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+}
+
+.billingIntro h2 {
+  margin: 8px 0 8px;
+  font-size: clamp(30px, 4vw, 48px);
+}
+
+.billingIntro p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.billingStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.billingStat {
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #f4f7f4;
+}
+
+.billingStat strong {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.billingStat span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .billingIntro {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 820px) {
   .adminHero h1 {
     font-size: 40px;
+  }
+
+  .billingStats {
+    grid-template-columns: 1fr;
   }
 }
