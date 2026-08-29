@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const allowedStatuses = new Set(["new", "contacted", "verified", "rejected"]);
+const allowedAvailabilityStatuses = new Set(["available", "limited", "unavailable"]);
 
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = {
@@ -33,10 +34,24 @@ export async function PATCH(
   }
 
   const body = await request.json().catch(() => ({}));
-  const status = typeof body.status === "string" ? body.status : "";
+  const updates: Record<string, string> = {};
 
-  if (!allowedStatuses.has(status)) {
-    return NextResponse.json({ error: "Estado no válido." }, { status: 400 });
+  if (typeof body.status === "string") {
+    if (!allowedStatuses.has(body.status)) {
+      return NextResponse.json({ error: "Estado no válido." }, { status: 400 });
+    }
+    updates.status = body.status;
+  }
+
+  if (typeof body.availabilityStatus === "string") {
+    if (!allowedAvailabilityStatuses.has(body.availabilityStatus)) {
+      return NextResponse.json({ error: "Disponibilidad no válida." }, { status: 400 });
+    }
+    updates.availability_status = body.availabilityStatus;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No hay cambios válidos que guardar." }, { status: 400 });
   }
 
   const response = await fetch(
@@ -44,13 +59,13 @@ export async function PATCH(
     {
       method: "PATCH",
       headers: supabaseHeaders(secretKey),
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(updates),
     },
   );
 
   if (!response.ok) {
-    console.error("Technician status update failed:", response.status, await response.text());
-    return NextResponse.json({ error: "No se ha podido guardar el estado." }, { status: 500 });
+    console.error("Technician update failed:", response.status, await response.text());
+    return NextResponse.json({ error: "No se ha podido guardar el cambio." }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
