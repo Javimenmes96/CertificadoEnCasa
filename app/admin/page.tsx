@@ -103,6 +103,7 @@ export default async function AdminPage() {
           <nav className={styles.adminNav} aria-label="Secciones del panel">
             <Link href="/admin">Solicitudes de clientes</Link>
             <Link href="/admin/tecnicos">Altas de técnicos</Link>
+            <Link href="/admin/liquidaciones">Liquidaciones</Link>
           </nav>
         </div>
       </section>
