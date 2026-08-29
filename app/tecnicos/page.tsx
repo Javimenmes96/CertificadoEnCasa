@@ -1,4 +1,6 @@
 import Link from "next/link";
+import LocationSearchForm from "./LocationSearchForm";
+import { findPostalPlace, lookupSpanishPostalCode, normalizePlace } from "@/lib/postal";
 
 type PublicTechnician = {
   id: string;
@@ -17,80 +19,23 @@ type PageSearchParams = Promise<{
   municipio?: string | string[];
 }>;
 
-const provinceByPostalPrefix: Record<string, string> = {
-  "01": "Álava",
-  "02": "Albacete",
-  "03": "Alicante",
-  "04": "Almería",
-  "05": "Ávila",
-  "06": "Badajoz",
-  "07": "Illes Balears",
-  "08": "Barcelona",
-  "09": "Burgos",
-  "10": "Cáceres",
-  "11": "Cádiz",
-  "12": "Castellón",
-  "13": "Ciudad Real",
-  "14": "Córdoba",
-  "15": "A Coruña",
-  "16": "Cuenca",
-  "17": "Girona",
-  "18": "Granada",
-  "19": "Guadalajara",
-  "20": "Gipuzkoa",
-  "21": "Huelva",
-  "22": "Huesca",
-  "23": "Jaén",
-  "24": "León",
-  "25": "Lleida",
-  "26": "La Rioja",
-  "27": "Lugo",
-  "28": "Madrid",
-  "29": "Málaga",
-  "30": "Murcia",
-  "31": "Navarra",
-  "32": "Ourense",
-  "33": "Asturias",
-  "34": "Palencia",
-  "35": "Las Palmas",
-  "36": "Pontevedra",
-  "37": "Salamanca",
-  "38": "Santa Cruz de Tenerife",
-  "39": "Cantabria",
-  "40": "Segovia",
-  "41": "Sevilla",
-  "42": "Soria",
-  "43": "Tarragona",
-  "44": "Teruel",
-  "45": "Toledo",
-  "46": "Valencia",
-  "47": "Valladolid",
-  "48": "Bizkaia",
-  "49": "Zamora",
-  "50": "Zaragoza",
-  "51": "Ceuta",
-  "52": "Melilla",
-};
-
 const provinceAliases: Record<string, string[]> = {
-  "Álava": ["Álava", "Araba"],
-  "Alicante": ["Alicante", "Alacant"],
-  "Illes Balears": ["Illes Balears", "Islas Baleares", "Baleares"],
-  "Castellón": ["Castellón", "Castelló"],
-  "A Coruña": ["A Coruña", "La Coruña", "Coruña"],
-  "Girona": ["Girona", "Gerona"],
-  "Gipuzkoa": ["Gipuzkoa", "Guipúzcoa"],
-  "Lleida": ["Lleida", "Lérida"],
-  "Ourense": ["Ourense", "Orense"],
-  "Valencia": ["Valencia", "València"],
-  "Bizkaia": ["Bizkaia", "Vizcaya"],
+  alava: ["alava", "araba"],
+  alicante: ["alicante", "alacant"],
+  "illes balears": ["illes balears", "islas baleares", "baleares"],
+  castellon: ["castellon", "castello"],
+  "a coruna": ["a coruna", "la coruna", "coruna"],
+  girona: ["girona", "gerona"],
+  gipuzkoa: ["gipuzkoa", "guipuzcoa"],
+  lleida: ["lleida", "lerida"],
+  ourense: ["ourense", "orense"],
+  valencia: ["valencia", "valencia"],
+  bizkaia: ["bizkaia", "vizcaya"],
 };
 
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = { apikey: key };
-  if (!key.startsWith("sb_secret_")) {
-    headers.Authorization = `Bearer ${key}`;
-  }
+  if (!key.startsWith("sb_secret_")) headers.Authorization = `Bearer ${key}`;
   return headers;
 }
 
@@ -107,53 +52,45 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function provinceMentionedAsArea(zones: string, province: string) {
-  const normalizedZones = normalizeText(zones);
-  const aliases = provinceAliases[province] || [province];
+  const normalizedZones = normalizePlace(zones);
+  const normalizedProvince = normalizePlace(province);
+  const aliases = provinceAliases[normalizedProvince] || [normalizedProvince];
 
-  return aliases.some((alias) => {
-    const normalizedAlias = normalizeText(alias);
-    if (normalizedZones === normalizedAlias) return true;
+  const separatedAreas = zones
+    .split(/[,;/|]+/)
+    .map((area) => normalizePlace(area))
+    .filter(Boolean);
 
-    const separatedAreas = normalizedZones
-      .split(/[,;/|]+/)
-      .map((area) => area.trim())
-      .filter(Boolean);
-
-    return separatedAreas.some((area) =>
-      area === normalizedAlias ||
-      area === `provincia de ${normalizedAlias}` ||
-      area === `toda ${normalizedAlias}` ||
-      area === `toda la provincia de ${normalizedAlias}` ||
-      area === `comunidad de ${normalizedAlias}` ||
-      area === `comunidad autonoma de ${normalizedAlias}`,
-    );
-  });
+  return aliases.some((alias) =>
+    separatedAreas.some((area) =>
+      area === alias ||
+      area === `provincia de ${alias}` ||
+      area === `toda ${alias}` ||
+      area === `toda la provincia de ${alias}` ||
+      area === `comunidad de ${alias}` ||
+      area === `comunidad autonoma de ${alias}`,
+    ) || normalizedZones === alias,
+  );
 }
 
-function technicianCoversLocation(tecnico: PublicTechnician, postalCode: string, municipality: string) {
-  const zones = normalizeText(tecnico.work_zones);
-  const normalizedMunicipality = normalizeText(municipality);
-  const normalizedCity = normalizeText(tecnico.city);
+function technicianCoversLocation(
+  tecnico: PublicTechnician,
+  postalCode: string,
+  municipality: string,
+  province: string,
+) {
+  const zones = normalizePlace(tecnico.work_zones);
+  const normalizedMunicipality = normalizePlace(municipality);
+  const normalizedCity = normalizePlace(tecnico.city);
 
   if (["toda espana", "toda espana peninsular", "nacional", "todo el territorio nacional"].some((term) => zones.includes(term))) {
     return true;
   }
 
-  if (postalCode && zones.includes(postalCode)) return true;
+  if (zones.includes(postalCode)) return true;
   if (normalizedMunicipality && zones.includes(normalizedMunicipality)) return true;
-  if (normalizedMunicipality && normalizedCity === normalizedMunicipality) return true;
-
-  const province = /^\d{5}$/.test(postalCode) ? provinceByPostalPrefix[postalCode.slice(0, 2)] : undefined;
+  if (normalizedCity === normalizedMunicipality) return true;
   if (province && provinceMentionedAsArea(tecnico.work_zones, province)) return true;
 
   return false;
@@ -162,19 +99,11 @@ function technicianCoversLocation(tecnico: PublicTechnician, postalCode: string,
 async function getVerifiedTechnicians(): Promise<PublicTechnician[]> {
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-
   if (!supabaseUrl || !secretKey) return [];
 
   const select = [
-    "id",
-    "name",
-    "city",
-    "province",
-    "qualification",
-    "years_experience",
-    "work_zones",
-    "travel_radius_km",
-    "price_from_eur",
+    "id", "name", "city", "province", "qualification", "years_experience",
+    "work_zones", "travel_radius_km", "price_from_eur",
   ].join(",");
 
   const response = await fetch(
@@ -193,17 +122,24 @@ async function getVerifiedTechnicians(): Promise<PublicTechnician[]> {
 export default async function TecnicosPage({ searchParams }: { searchParams: PageSearchParams }) {
   const params = await searchParams;
   const postalCode = firstParam(params.cp).replace(/\D/g, "").slice(0, 5);
-  const municipality = firstParam(params.municipio).trim().slice(0, 100);
-  const hasSearch = /^\d{5}$/.test(postalCode) && municipality.length > 0;
+  const municipalityParam = firstParam(params.municipio).trim().slice(0, 100);
+
+  const lookup = /^\d{5}$/.test(postalCode) ? await lookupSpanishPostalCode(postalCode) : null;
+  const matchedPlace = municipalityParam ? findPostalPlace(lookup, municipalityParam) : null;
+  const hasSearch = Boolean(matchedPlace);
+  const municipality = matchedPlace?.municipality || municipalityParam;
+  const province = matchedPlace?.province || "";
+  const invalidCombination = Boolean(postalCode && municipalityParam && lookup && !matchedPlace);
+  const invalidPostalCode = Boolean(postalCode && !lookup);
 
   const allTechnicians = hasSearch ? await getVerifiedTechnicians() : [];
-  const tecnicos = hasSearch
-    ? allTechnicians.filter((tecnico) => technicianCoversLocation(tecnico, postalCode, municipality))
+  const tecnicos = matchedPlace
+    ? allTechnicians.filter((tecnico) => technicianCoversLocation(tecnico, postalCode, matchedPlace.municipality, matchedPlace.province))
     : [];
 
   const query = new URLSearchParams();
   if (postalCode) query.set("cp", postalCode);
-  if (municipality) query.set("municipio", municipality);
+  if (matchedPlace?.municipality) query.set("municipio", matchedPlace.municipality);
   const locationQuery = query.toString();
   const locationSuffix = locationQuery ? `?${locationQuery}` : "";
 
@@ -213,61 +149,36 @@ export default async function TecnicosPage({ searchParams }: { searchParams: Pag
         <div className="container">
           <span className="eyebrow">Técnicos verificados</span>
           <h1>Encuentra profesionales que trabajen en tu zona.</h1>
-          <p>
-            Indica dónde está el inmueble. Te mostraremos los técnicos verificados que han indicado trabajar en esa zona y tú eliges el que prefieras.
-          </p>
+          <p>Escribe el código postal del inmueble. Comprobaremos automáticamente el municipio y te mostraremos solo técnicos que cubren esa zona.</p>
         </div>
       </section>
 
       <section className="section">
         <div className="container">
-          <form action="/tecnicos" method="get" className="location-search-card">
-            <div className="location-search-copy">
-              <span className="eyebrow">Ubicación del inmueble</span>
-              <h2>¿Dónde necesitas el certificado?</h2>
-              <p>Usamos estos datos únicamente para enseñarte profesionales que cubren esa zona.</p>
+          <LocationSearchForm initialPostalCode={postalCode} initialMunicipality={matchedPlace?.municipality || ""} />
+
+          {invalidCombination && (
+            <div className="form-status error" role="alert" style={{ marginTop: 18 }}>
+              El código postal {postalCode} no corresponde con “{municipalityParam}”. El municipio se obtiene ahora automáticamente a partir del código postal.
             </div>
-            <div className="location-search-fields">
-              <div className="field">
-                <label htmlFor="search-cp">Código postal *</label>
-                <input
-                  id="search-cp"
-                  name="cp"
-                  inputMode="numeric"
-                  pattern="[0-9]{5}"
-                  maxLength={5}
-                  defaultValue={postalCode}
-                  placeholder="28001"
-                  required
-                />
-              </div>
-              <div className="field location-search-municipality">
-                <label htmlFor="search-municipio">Municipio *</label>
-                <input
-                  id="search-municipio"
-                  name="municipio"
-                  maxLength={100}
-                  defaultValue={municipality}
-                  placeholder="Ej. Rivas-Vaciamadrid"
-                  required
-                />
-              </div>
-              <button type="submit" className="button location-search-button">Ver técnicos disponibles</button>
+          )}
+
+          {invalidPostalCode && (
+            <div className="form-status error" role="alert" style={{ marginTop: 18 }}>
+              No hemos encontrado el código postal {postalCode} en España. Compruébalo e inténtalo de nuevo.
             </div>
-          </form>
+          )}
 
           {!hasSearch ? (
             <div className="location-search-empty">
-              <strong>Primero indica la ubicación.</strong>
-              <p>No mostramos un listado nacional indiscriminado: queremos que compares solo opciones que tengan sentido para tu inmueble.</p>
+              <strong>Primero indica el código postal.</strong>
+              <p>El municipio ya no se escribe libremente: lo validamos para evitar combinaciones incorrectas.</p>
             </div>
           ) : tecnicos.length === 0 ? (
             <div className="form-card location-no-results">
               <span className="eyebrow">Sin coincidencias por ahora</span>
               <h2 style={{ fontSize: 30 }}>Todavía no tenemos un técnico verificado para {municipality}.</h2>
-              <p className="lead">
-                Puedes dejarnos los datos del inmueble. No te asignaremos un profesional automáticamente; podrás elegir cuando haya opciones disponibles en tu zona.
-              </p>
+              <p className="lead">Puedes dejarnos los datos del inmueble. No te asignaremos un profesional automáticamente; podrás elegir cuando haya opciones disponibles en tu zona.</p>
               <div className="hero-actions">
                 <Link href={`/solicitar${locationSuffix}`} className="button">Dejar mi solicitud</Link>
                 <Link href="/tecnicos" className="button button-secondary">Cambiar ubicación</Link>
@@ -279,6 +190,7 @@ export default async function TecnicosPage({ searchParams }: { searchParams: Pag
                 <div>
                   <span className="eyebrow">Resultados en tu zona</span>
                   <h2>{tecnicos.length} {tecnicos.length === 1 ? "técnico disponible" : "técnicos disponibles"} para {municipality}</h2>
+                  {province && <p style={{ margin: 0, color: "var(--muted)" }}>{province}</p>}
                 </div>
                 <span className="location-result-badge">CP {postalCode}</span>
               </div>
@@ -293,17 +205,13 @@ export default async function TecnicosPage({ searchParams }: { searchParams: Pag
                         <span style={{ color: "var(--muted)" }}>{tecnico.city}, {tecnico.province}</span>
                       </div>
                     </div>
-
                     <div className="verified-line">✓ Profesional verificado</div>
                     <p style={{ color: "var(--muted)", marginTop: 14 }}>{tecnico.qualification}</p>
-
                     <div className="tech-meta">
                       {tecnico.years_experience !== null && <span className="tag">{tecnico.years_experience} años de experiencia</span>}
                       {tecnico.travel_radius_km !== null && <span className="tag">Radio {tecnico.travel_radius_km} km</span>}
                     </div>
-
                     <p className="tech-zones"><strong>Zonas:</strong> {tecnico.work_zones}</p>
-
                     <div className="tech-choice-row">
                       <div>
                         <span style={{ color: "var(--muted)", fontSize: 13 }}>Precio orientativo desde</span>
@@ -327,7 +235,7 @@ export default async function TecnicosPage({ searchParams }: { searchParams: Pag
           <div>
             <span className="eyebrow">Tú decides</span>
             <h2 style={{ marginTop: 16 }}>La plataforma no te asigna un técnico.</h2>
-            <p className="lead">Filtramos las opciones por zona para que puedas comparar y elegir con quién quieres trabajar.</p>
+            <p className="lead">Validamos la ubicación, filtramos las opciones y tú eliges con quién quieres trabajar.</p>
           </div>
           <div className="panel">
             <h3>¿Eres técnico?</h3>
