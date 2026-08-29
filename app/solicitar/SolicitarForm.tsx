@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type SubmitState = "idle" | "sending" | "success" | "error";
@@ -18,20 +18,87 @@ type PublicTechnician = {
   price_from_eur: number | null;
 };
 
+type PostalPlace = {
+  municipality: string;
+  province: string;
+};
+
+type PostalLookup = {
+  postalCode: string;
+  places: PostalPlace[];
+};
+
 export default function SolicitarForm() {
   const searchParams = useSearchParams();
   const technicianId = searchParams.get("tecnico");
   const initialPostalCode = (searchParams.get("cp") || "").replace(/\D/g, "").slice(0, 5);
   const initialMunicipality = (searchParams.get("municipio") || "").trim().slice(0, 100);
-  const techniciansHref = initialPostalCode && initialMunicipality
-    ? `/tecnicos?cp=${encodeURIComponent(initialPostalCode)}&municipio=${encodeURIComponent(initialMunicipality)}`
-    : "/tecnicos";
+
+  const [postalCode, setPostalCode] = useState(initialPostalCode);
+  const [postalPlaces, setPostalPlaces] = useState<PostalPlace[]>([]);
+  const [municipality, setMunicipality] = useState(initialMunicipality);
+  const [postalLoading, setPostalLoading] = useState(false);
+  const [postalError, setPostalError] = useState("");
 
   const [technician, setTechnician] = useState<PublicTechnician | null>(null);
   const [technicianLoading, setTechnicianLoading] = useState(Boolean(technicianId));
   const [technicianError, setTechnicianError] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
+
+  const selectedPostalPlace = useMemo(
+    () => postalPlaces.find((place) => place.municipality === municipality) || null,
+    [postalPlaces, municipality],
+  );
+
+  const techniciansHref = postalCode.length === 5 && municipality
+    ? `/tecnicos?cp=${encodeURIComponent(postalCode)}&municipio=${encodeURIComponent(municipality)}`
+    : "/tecnicos";
+
+  useEffect(() => {
+    let cancelled = false;
+    const cp = postalCode.replace(/\D/g, "").slice(0, 5);
+
+    if (cp.length !== 5) {
+      setPostalPlaces([]);
+      setMunicipality("");
+      setPostalError("");
+      return;
+    }
+
+    setPostalLoading(true);
+    setPostalError("");
+
+    fetch(`/api/postal-code/${cp}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No hemos podido comprobar el código postal.");
+        return data as PostalLookup;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const places = data.places || [];
+        setPostalPlaces(places);
+
+        const initialMatch = places.find(
+          (place) => place.municipality.toLocaleLowerCase("es") === initialMunicipality.toLocaleLowerCase("es"),
+        );
+        setMunicipality(initialMatch?.municipality || places[0]?.municipality || "");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setPostalPlaces([]);
+        setMunicipality("");
+        setPostalError(error instanceof Error ? error.message : "No hemos podido comprobar el código postal.");
+      })
+      .finally(() => {
+        if (!cancelled) setPostalLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [postalCode, initialMunicipality]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +142,12 @@ export default function SolicitarForm() {
     const form = event.currentTarget;
     const formData = new FormData(form);
 
+    if (!selectedPostalPlace) {
+      setSubmitState("error");
+      setMessage("Introduce un código postal válido y espera a que identifiquemos el municipio.");
+      return;
+    }
+
     setSubmitState("sending");
     setMessage("");
 
@@ -83,8 +156,8 @@ export default function SolicitarForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          postalCode: formData.get("postalCode"),
-          municipality: formData.get("municipality"),
+          postalCode,
+          municipality: selectedPostalPlace.municipality,
           propertyType: formData.get("propertyType"),
           surfaceM2: formData.get("surfaceM2"),
           reason: formData.get("reason"),
@@ -99,10 +172,7 @@ export default function SolicitarForm() {
       });
 
       const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(result.error || "No se ha podido enviar la solicitud.");
-      }
+      if (!response.ok) throw new Error(result.error || "No se ha podido enviar la solicitud.");
 
       setSubmitState("success");
       setMessage(
@@ -119,9 +189,7 @@ export default function SolicitarForm() {
 
   return (
     <form className="form-card" onSubmit={handleSubmit}>
-      {technicianLoading && (
-        <div className="selected-technician-card">Cargando el técnico que has elegido…</div>
-      )}
+      {technicianLoading && <div className="selected-technician-card">Cargando el técnico que has elegido…</div>}
 
       {technician && (
         <div className="selected-technician-card">
@@ -154,12 +222,41 @@ export default function SolicitarForm() {
       <div className="form-grid">
         <div className="field">
           <label htmlFor="postalCode">Código postal *</label>
-          <input id="postalCode" name="postalCode" inputMode="numeric" pattern="[0-9]{5}" maxLength={5} defaultValue={initialPostalCode} placeholder="28001" required />
+          <input
+            id="postalCode"
+            name="postalCode"
+            inputMode="numeric"
+            pattern="[0-9]{5}"
+            maxLength={5}
+            value={postalCode}
+            onChange={(event) => setPostalCode(event.target.value.replace(/\D/g, "").slice(0, 5))}
+            placeholder="28001"
+            required
+          />
         </div>
 
         <div className="field">
           <label htmlFor="municipality">Municipio *</label>
-          <input id="municipality" name="municipality" defaultValue={initialMunicipality} placeholder="Ej. Rivas-Vaciamadrid" maxLength={100} required />
+          {postalPlaces.length > 1 ? (
+            <select id="municipality" name="municipality" value={municipality} onChange={(event) => setMunicipality(event.target.value)} required>
+              {postalPlaces.map((place) => (
+                <option key={`${place.municipality}-${place.province}`} value={place.municipality}>
+                  {place.municipality}{place.province ? ` · ${place.province}` : ""}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="municipality"
+              name="municipality"
+              value={postalLoading ? "Comprobando…" : selectedPostalPlace?.municipality || ""}
+              placeholder="Se completa automáticamente"
+              readOnly
+              required
+            />
+          )}
+          {selectedPostalPlace && <span className="field-help">CP validado: {selectedPostalPlace.municipality}{selectedPostalPlace.province ? `, ${selectedPostalPlace.province}` : ""}</span>}
+          {postalError && <span className="field-error">{postalError}</span>}
         </div>
 
         <div className="field">
@@ -226,12 +323,17 @@ export default function SolicitarForm() {
         </div>
       </div>
 
-      <button className="button" type="submit" disabled={submitState === "sending" || technicianLoading} style={{ marginTop: 22 }}>
+      <button
+        className="button"
+        type="submit"
+        disabled={submitState === "sending" || technicianLoading || postalLoading || !selectedPostalPlace}
+        style={{ marginTop: 22 }}
+      >
         {submitState === "sending" ? "Enviando…" : technician ? `Enviar solicitud a ${technician.name}` : "Enviar solicitud"}
       </button>
 
       <p className="form-note">
-        * Campos obligatorios. {technician ? "Tus datos se compartirán con el profesional que has elegido para que pueda gestionar el servicio." : "No asignamos un técnico por ti: podrás comparar y elegir el profesional que prefieras."}
+        * Campos obligatorios. El municipio se comprueba automáticamente con el código postal. {technician ? "Tus datos se compartirán con el profesional que has elegido para que pueda gestionar el servicio." : "No asignamos un técnico por ti: podrás comparar y elegir el profesional que prefieras."}
       </p>
 
       {message && (

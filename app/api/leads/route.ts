@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { findPostalPlace, lookupSpanishPostalCode } from "@/lib/postal";
 
 function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -272,7 +273,7 @@ export async function POST(request: Request) {
   }
 
   const postalCode = cleanText(body.postalCode, 5);
-  const municipality = cleanText(body.municipality, 100);
+  let municipality = cleanText(body.municipality, 100);
   const propertyType = cleanText(body.propertyType, 80);
   const reason = cleanText(body.reason, 100);
   const notes = cleanText(body.notes, 1500);
@@ -292,6 +293,21 @@ export async function POST(request: Request) {
   if (!municipality || !propertyType || !name) {
     return NextResponse.json({ error: "Completa los campos obligatorios." }, { status: 400 });
   }
+
+  const postalLookup = await lookupSpanishPostalCode(postalCode);
+  if (!postalLookup) {
+    return NextResponse.json({ error: "No hemos encontrado ese código postal en España." }, { status: 400 });
+  }
+
+  const postalPlace = findPostalPlace(postalLookup, municipality);
+  if (!postalPlace) {
+    const expected = postalLookup.places.map((place) => place.municipality).join(" / ");
+    return NextResponse.json(
+      { error: `El código postal ${postalCode} no corresponde con “${municipality}”. Municipio esperado: ${expected}.` },
+      { status: 400 },
+    );
+  }
+  municipality = postalPlace.municipality;
 
   if (!phone && !email) {
     return NextResponse.json({ error: "Necesitamos al menos un teléfono o un email de contacto." }, { status: 400 });
