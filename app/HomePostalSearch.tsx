@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./HomePostalSearch.module.css";
 
 type PostalPlace = {
   municipality: string;
@@ -81,8 +82,8 @@ export default function HomePostalSearch() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="hero-postal-search">
-      <div className="field hero-postal-field">
+    <form onSubmit={handleSubmit} className={styles.form}>
+      <div className={`field ${styles.field}`}>
         <label htmlFor="home-cp">Código postal del inmueble *</label>
         <input
           id="home-cp"
@@ -99,7 +100,7 @@ export default function HomePostalSearch() {
       </div>
 
       {places.length > 1 && (
-        <div className="field hero-postal-place">
+        <div className={`field ${styles.field}`}>
           <label htmlFor="home-municipio">Municipio</label>
           <select
             id="home-municipio"
@@ -115,17 +116,17 @@ export default function HomePostalSearch() {
         </div>
       )}
 
-      <button type="submit" className="button hero-postal-button" disabled={loading || !selectedPlace}>
+      <button type="submit" className={`button ${styles.button}`} disabled={loading || !selectedPlace}>
         {loading ? "Comprobando…" : "Ver técnicos disponibles"}
       </button>
 
-      <div className="hero-postal-feedback" aria-live="polite">
+      <div className={styles.feedback} aria-live="polite">
         {selectedPlace && (
-          <span className="postal-confirmation">
+          <span className={styles.confirmation}>
             ✓ {selectedPlace.municipality}{selectedPlace.province ? `, ${selectedPlace.province}` : ""}
           </span>
         )}
-        {error && <span className="form-status error" role="alert">{error}</span>}
+        {error && <span className={styles.error} role="alert">{error}</span>}
       </div>
     </form>
   );
