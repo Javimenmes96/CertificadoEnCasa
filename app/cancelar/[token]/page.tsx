@@ -44,12 +44,9 @@ function CancellationVisual({ success = false }: { success?: boolean }) {
           <path d="m8.5 12.2 2.2 2.2 4.8-5" />
         </svg>
       ) : (
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 3.5h7l3.5 3.5v6.2" />
-          <path d="M14 3.5V8h4.5" />
-          <path d="M7 3.5v17h6" />
-          <circle cx="17" cy="17" r="4" />
-          <path d="m15.6 15.6 2.8 2.8M18.4 15.6l-2.8 2.8" />
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="m9.3 9.3 5.4 5.4M14.7 9.3l-5.4 5.4" />
         </svg>
       )}
     </div>
