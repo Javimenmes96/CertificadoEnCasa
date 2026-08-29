@@ -20,7 +20,7 @@ function supabaseHeaders(key: string, prefer = "return=representation") {
 
 function publicReviewerName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "Cliente verificado";
+  if (parts.length === 0) return "Cliente";
   if (parts.length === 1) return parts[0].slice(0, 40);
   return `${parts[0].slice(0, 30)} ${parts[1][0]?.toUpperCase() || ""}.`.trim();
 }
@@ -28,8 +28,9 @@ function publicReviewerName(name: string) {
 type ReviewLead = {
   id: string;
   name: string;
-  status: string;
+  created_at: string;
   selected_technician_id: string | null;
+  review_invited_at: string | null;
   review_submitted_at: string | null;
 };
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   const leadResponse = await fetch(
-    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/leads?select=id,name,status,selected_technician_id,review_submitted_at&review_token=eq.${encodeURIComponent(token)}&status=eq.completed&limit=1`,
+    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/leads?select=id,name,created_at,selected_technician_id,review_invited_at,review_submitted_at&review_token=eq.${encodeURIComponent(token)}&review_invited_at=not.is.null&limit=1`,
     { headers: supabaseHeaders(secretKey), cache: "no-store" },
   );
 
@@ -75,9 +76,15 @@ export async function POST(request: Request) {
 
   const leads = await leadResponse.json() as ReviewLead[];
   const lead = leads[0];
+  const fiveDaysAgo = Date.now() - 5 * 24 * 60 * 60 * 1000;
 
-  if (!lead || !lead.selected_technician_id) {
-    return NextResponse.json({ error: "Este enlace no corresponde a un servicio completado válido." }, { status: 404 });
+  if (
+    !lead
+    || !lead.selected_technician_id
+    || !lead.review_invited_at
+    || new Date(lead.created_at).getTime() > fiveDaysAgo
+  ) {
+    return NextResponse.json({ error: "Este enlace de valoración no está disponible." }, { status: 404 });
   }
 
   if (lead.review_submitted_at) {
@@ -105,7 +112,7 @@ export async function POST(request: Request) {
       reviewer_name: publicReviewerName(lead.name),
       rating,
       comment: comment || null,
-      verified: true,
+      verified: false,
       status: "published",
     }),
   });
