@@ -37,7 +37,7 @@ export default function PreciosPage() {
             <div className="plan-price">0 € <small>/ mes</small></div>
             <p>Para empezar y comprobar cuánto trabajo te aporta la plataforma sin asumir una cuota fija.</p>
             <ul className="check-list">
-              <li><strong>20% de comisión</strong> por encargo facturable</li>
+              <li><strong>20% de comisión + IVA</strong> por encargo facturable</li>
               <li>Sin cuota mensual</li>
               <li>Todos los servicios esenciales de la plataforma</li>
             </ul>
@@ -45,10 +45,10 @@ export default function PreciosPage() {
 
           <article className="price-card featured">
             <span className="eyebrow">Premium</span>
-            <div className="plan-price">29 € <small>/ mes</small></div>
+            <div className="plan-price">29 € <small>/ mes + IVA</small></div>
             <p>Para profesionales que ya reciben encargos de forma recurrente y quieren reducir su comisión.</p>
             <ul className="check-list">
-              <li><strong>12% de comisión</strong> por encargo facturable</li>
+              <li><strong>12% de comisión + IVA</strong> por encargo facturable</li>
               <li>Todo lo incluido en el plan Básico</li>
               <li>Menor coste variable por cada trabajo recibido</li>
             </ul>
@@ -56,10 +56,10 @@ export default function PreciosPage() {
 
           <article className="price-card">
             <span className="tag">Plus</span>
-            <div className="plan-price">59 € <small>/ mes</small></div>
+            <div className="plan-price">59 € <small>/ mes + IVA</small></div>
             <p>Para técnicos con un volumen alto de certificados que buscan la comisión más reducida.</p>
             <ul className="check-list">
-              <li><strong>7% de comisión</strong> por encargo facturable</li>
+              <li><strong>7% de comisión + IVA</strong> por encargo facturable</li>
               <li>Todo lo incluido en el plan Premium</li>
               <li>La comisión más baja de CertificadoEnCasa</li>
             </ul>
@@ -102,11 +102,11 @@ export default function PreciosPage() {
                 Una solicitud se considera facturable por defecto. Si el cliente o el técnico comunica una cancelación antes de su liquidación, <strong>no se cobra comisión</strong>.
               </li>
               <li>
-                Las liquidaciones se preparan los días <strong>10, 20 y último día de cada mes</strong>, incluyendo solo solicitudes recibidas al menos <strong>5 días antes</strong>.
+                Las liquidaciones se preparan los días <strong>10, 20 y último día de cada mes</strong>, incluyendo solo solicitudes que hayan cumplido al menos <strong>5 días completos</strong> en el momento de la liquidación.
               </li>
             </ul>
             <p className="form-note" style={{ marginBottom: 0 }}>
-              Ejemplo: si tu precio publicado es 50 € y estás en el plan Básico, la comisión de ese encargo será de 10 €, aunque después acuerdes otro importe directamente con el cliente.
+              Ejemplo: si tu precio publicado es 50 € y estás en el plan Básico, la comisión base será de 10 € más IVA, aunque después acuerdes otro importe directamente con el cliente.
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function PreciosPage() {
             <span className="eyebrow" style={{ background: "rgba(255,255,255,.15)", color: "white" }}>Únete como técnico</span>
             <h2 style={{ marginTop: 18 }}>Empieza con el Básico y cambia de plan cuando te compense.</h2>
             <p>
-              El alta no publica automáticamente tu perfil: primero revisamos tu habilitación profesional. Tampoco se activa ningún cobro automático durante el proceso de solicitud de alta.
+              El alta no publica automáticamente tu perfil: primero revisamos tu habilitación profesional. La configuración del método de pago se realiza después mediante Stripe.
             </p>
             <div className="hero-actions">
               <Link href="/unete-como-tecnico" className="button" style={{ background: "white", color: "var(--brand-dark)", borderColor: "white" }}>
