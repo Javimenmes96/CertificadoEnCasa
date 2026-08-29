@@ -1,4 +1,5 @@
 const MADRID_TIME_ZONE = "Europe/Madrid";
+const SETTLEMENT_CRON_UTC_HOUR = 11;
 
 export type MadridDateParts = {
   year: number;
@@ -37,6 +38,10 @@ function formatDateParts(year: number, month: number, day: number) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function settlementCutoff(settlementDate: string) {
+  return new Date(`${settlementDate}T${String(SETTLEMENT_CRON_UTC_HOUR).padStart(2, "0")}:00:00.000Z`);
+}
+
 export function isSettlementDate(date = new Date()) {
   const { year, month, day } = madridDateParts(date);
   const lastDay = daysInMonth(year, month);
@@ -46,10 +51,20 @@ export function isSettlementDate(date = new Date()) {
 export function nextSettlementDate(date = new Date()) {
   const { year, month, day } = madridDateParts(date);
   const lastDay = daysInMonth(year, month);
+  const candidates = [10, 20, lastDay];
 
-  if (day <= 10) return formatDateParts(year, month, 10);
-  if (day <= 20) return formatDateParts(year, month, 20);
-  if (day <= lastDay) return formatDateParts(year, month, lastDay);
+  for (const candidateDay of candidates) {
+    if (day < candidateDay) {
+      return formatDateParts(year, month, candidateDay);
+    }
+
+    if (day === candidateDay) {
+      const candidate = formatDateParts(year, month, candidateDay);
+      if (date.getTime() < settlementCutoff(candidate).getTime()) {
+        return candidate;
+      }
+    }
+  }
 
   const nextMonth = month === 12 ? 1 : month + 1;
   const nextYear = month === 12 ? year + 1 : year;
@@ -58,8 +73,7 @@ export function nextSettlementDate(date = new Date()) {
 
 export function isEligibleBySettlementDate(eligibleAt: string | null, settlementDate: string) {
   if (!eligibleAt) return false;
-  const eligibleDate = madridDateString(new Date(eligibleAt));
-  return eligibleDate <= settlementDate;
+  return new Date(eligibleAt).getTime() <= settlementCutoff(settlementDate).getTime();
 }
 
 export function formatSettlementDate(dateString: string) {
