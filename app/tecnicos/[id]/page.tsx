@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+type AvailabilityStatus = "available" | "limited" | "unavailable";
+
 type PublicTechnician = {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ type PublicTechnician = {
   travel_radius_km: number | null;
   price_from_eur: number | null;
   notes: string | null;
+  availability_status: AvailabilityStatus;
 };
 
 function supabaseHeaders(key: string) {
@@ -35,6 +38,16 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
+function availabilityMeta(status: AvailabilityStatus | string) {
+  if (status === "unavailable") {
+    return { label: "No disponible temporalmente", color: "#8b2e28", background: "#fff1ef", border: "#e5b5b1" };
+  }
+  if (status === "limited") {
+    return { label: "Disponibilidad limitada", color: "#7a5200", background: "#fff8e6", border: "#efd18b" };
+  }
+  return { label: "Disponible", color: "#17653b", background: "#eff9f1", border: "#b8dec2" };
+}
+
 async function getTechnician(id: string): Promise<PublicTechnician | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
@@ -53,6 +66,7 @@ async function getTechnician(id: string): Promise<PublicTechnician | null> {
     "travel_radius_km",
     "price_from_eur",
     "notes",
+    "availability_status",
   ].join(",");
 
   const response = await fetch(
@@ -87,6 +101,8 @@ export default async function TechnicianProfilePage({
   const chooseHref = locationQuery
     ? `/solicitar?tecnico=${tecnico.id}&${locationQuery}`
     : `/solicitar?tecnico=${tecnico.id}`;
+  const availability = availabilityMeta(tecnico.availability_status);
+  const unavailable = tecnico.availability_status === "unavailable";
 
   return (
     <>
@@ -99,6 +115,11 @@ export default async function TechnicianProfilePage({
               <span className="eyebrow">✓ Profesional verificado</span>
               <h1 style={{ marginTop: 16 }}>{tecnico.name}</h1>
               <p>{tecnico.city}, {tecnico.province}</p>
+              <div style={{ marginTop: 12 }}>
+                <span style={{ display: "inline-flex", padding: "6px 10px", borderRadius: 999, fontSize: 13, fontWeight: 800, color: availability.color, background: availability.background, border: `1px solid ${availability.border}` }}>
+                  {availability.label}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -113,6 +134,7 @@ export default async function TechnicianProfilePage({
               <div><span>Experiencia</span><strong>{tecnico.years_experience !== null ? `${tecnico.years_experience} años` : "No indicada"}</strong></div>
               <div><span>Zona de trabajo</span><strong>{tecnico.work_zones}</strong></div>
               <div><span>Radio de desplazamiento</span><strong>{tecnico.travel_radius_km !== null ? `${tecnico.travel_radius_km} km` : "Consultar"}</strong></div>
+              <div><span>Disponibilidad</span><strong>{availability.label}</strong></div>
             </div>
             {tecnico.notes && (
               <div className="profile-about">
@@ -132,8 +154,20 @@ export default async function TechnicianProfilePage({
             <span style={{ color: "var(--muted)", fontSize: 14 }}>Precio orientativo desde</span>
             <div className="profile-price">{tecnico.price_from_eur !== null ? `${tecnico.price_from_eur} €` : "Consultar"}</div>
             <p>El precio final puede variar según el inmueble, desplazamiento y condiciones concretas del servicio.</p>
-            <Link href={chooseHref} className="button profile-choose-button">Elegir este técnico</Link>
-            <p className="form-note">Al elegirlo podrás completar el resto de datos del inmueble antes de enviar la solicitud.</p>
+            {unavailable ? (
+              <div className="legal-notice" style={{ marginTop: 18 }}>
+                Este técnico está temporalmente no disponible y no acepta nuevas solicitudes. Su perfil permanece visible para que puedas consultarlo.
+              </div>
+            ) : (
+              <>
+                <Link href={chooseHref} className="button profile-choose-button">Elegir este técnico</Link>
+                <p className="form-note">
+                  {tecnico.availability_status === "limited"
+                    ? "Tiene disponibilidad limitada, pero puedes enviarle una solicitud. Confirmará contigo si puede atenderla."
+                    : "Al elegirlo podrás completar el resto de datos del inmueble antes de enviar la solicitud."}
+                </p>
+              </>
+            )}
           </aside>
         </div>
       </section>
