@@ -21,6 +21,11 @@ type PublicTechnician = {
 export default function SolicitarForm() {
   const searchParams = useSearchParams();
   const technicianId = searchParams.get("tecnico");
+  const initialPostalCode = (searchParams.get("cp") || "").replace(/\D/g, "").slice(0, 5);
+  const initialMunicipality = (searchParams.get("municipio") || "").trim().slice(0, 100);
+  const techniciansHref = initialPostalCode && initialMunicipality
+    ? `/tecnicos?cp=${encodeURIComponent(initialPostalCode)}&municipio=${encodeURIComponent(initialMunicipality)}`
+    : "/tecnicos";
 
   const [technician, setTechnician] = useState<PublicTechnician | null>(null);
   const [technicianLoading, setTechnicianLoading] = useState(Boolean(technicianId));
@@ -126,13 +131,13 @@ export default function SolicitarForm() {
             <p>{technician.city}, {technician.province} · {technician.qualification}</p>
             <p><strong>{technician.price_from_eur !== null ? `Desde ${technician.price_from_eur} €` : "Precio a consultar"}</strong></p>
           </div>
-          <Link href="/tecnicos" className="button button-secondary button-small">Cambiar técnico</Link>
+          <Link href={techniciansHref} className="button button-secondary button-small">Cambiar técnico</Link>
         </div>
       )}
 
       {technicianId && !technicianLoading && !technician && (
         <div className="legal-notice">
-          {technicianError || "El técnico seleccionado ya no está disponible."} <Link href="/tecnicos"><strong>Elegir otro técnico</strong></Link>.
+          {technicianError || "El técnico seleccionado ya no está disponible."} <Link href={techniciansHref}><strong>Elegir otro técnico</strong></Link>.
         </div>
       )}
 
@@ -140,21 +145,21 @@ export default function SolicitarForm() {
         <div className="choice-prompt">
           <div>
             <strong>¿Quieres elegir tú al técnico?</strong>
-            <p>Compara primero los profesionales verificados y vuelve con el que prefieras.</p>
+            <p>Compara primero los profesionales verificados de tu zona y vuelve con el que prefieras.</p>
           </div>
-          <Link href="/tecnicos" className="button button-secondary button-small">Ver técnicos</Link>
+          <Link href={techniciansHref} className="button button-secondary button-small">Ver técnicos</Link>
         </div>
       )}
 
       <div className="form-grid">
         <div className="field">
           <label htmlFor="postalCode">Código postal *</label>
-          <input id="postalCode" name="postalCode" inputMode="numeric" pattern="[0-9]{5}" maxLength={5} placeholder="28001" required />
+          <input id="postalCode" name="postalCode" inputMode="numeric" pattern="[0-9]{5}" maxLength={5} defaultValue={initialPostalCode} placeholder="28001" required />
         </div>
 
         <div className="field">
           <label htmlFor="municipality">Municipio *</label>
-          <input id="municipality" name="municipality" placeholder="Ej. Rivas-Vaciamadrid" maxLength={100} required />
+          <input id="municipality" name="municipality" defaultValue={initialMunicipality} placeholder="Ej. Rivas-Vaciamadrid" maxLength={100} required />
         </div>
 
         <div className="field">
@@ -233,7 +238,7 @@ export default function SolicitarForm() {
         <div className={`form-status ${submitState === "success" ? "success" : "error"}`} role="status" aria-live="polite">
           {message}
           {submitState === "success" && !technician && (
-            <div style={{ marginTop: 12 }}><Link href="/tecnicos"><strong>Comparar técnicos verificados →</strong></Link></div>
+            <div style={{ marginTop: 12 }}><Link href={techniciansHref}><strong>Comparar técnicos verificados →</strong></Link></div>
           )}
         </div>
       )}
