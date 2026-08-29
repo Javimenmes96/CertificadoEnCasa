@@ -128,7 +128,9 @@ export default async function CancelarPage({
       <div className="container">
         <div className="panel" style={{ maxWidth: 720, margin: "0 auto" }}>
           <span className="eyebrow">Cancelar encargo</span>
-          <h1>¿Este certificado finalmente no se va a realizar?</h1>
+          <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", lineHeight: 1.06, marginTop: 14, marginBottom: 20 }}>
+            ¿Este certificado finalmente no se va a realizar?
+          </h1>
           <p className="lead">
             Solicitud de <strong>{found.lead.property_type}</strong> en <strong>{found.lead.municipality}</strong>.
           </p>
