@@ -34,6 +34,7 @@ export async function GET(
     "work_zones",
     "travel_radius_km",
     "price_from_eur",
+    "availability_status",
   ].join(",");
 
   const response = await fetch(
@@ -46,9 +47,17 @@ export async function GET(
   }
 
   const rows = await response.json() as Array<Record<string, unknown>>;
-  if (!rows[0]) {
+  const technician = rows[0];
+  if (!technician) {
     return NextResponse.json({ error: "Este técnico no está disponible." }, { status: 404 });
   }
 
-  return NextResponse.json({ technician: rows[0] });
+  if (technician.availability_status === "unavailable") {
+    return NextResponse.json(
+      { error: "Este técnico está temporalmente no disponible y no acepta nuevas solicitudes." },
+      { status: 409 },
+    );
+  }
+
+  return NextResponse.json({ technician });
 }
