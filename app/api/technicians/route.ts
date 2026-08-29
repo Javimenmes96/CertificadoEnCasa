@@ -131,6 +131,81 @@ async function sendNotification(data: {
   }
 }
 
+async function sendTechnicianConfirmation(data: {
+  id: string;
+  name: string;
+  email: string;
+  city: string;
+  province: string;
+  workZones: string;
+  priceFromEur: number;
+}) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const from = process.env.LEAD_EMAIL_FROM;
+  if (!resendApiKey || !from || !data.email) return;
+
+  const text = [
+    `Hola ${data.name},`,
+    "",
+    "Hemos recibido tu solicitud de alta en CertificadoEnCasa.",
+    "",
+    `Base profesional: ${data.city}, ${data.province}`,
+    `Zonas indicadas: ${data.workZones}`,
+    `Precio orientativo desde: ${data.priceFromEur} €`,
+    "",
+    "Ahora revisaremos tus datos profesionales. Antes de publicar el perfil podremos solicitarte la documentación necesaria para comprobar tu habilitación para emitir certificados energéticos.",
+    "",
+    "Te avisaremos por email cuando tu perfil quede verificado y publicado.",
+    "",
+    "Gracias por unirte a CertificadoEnCasa.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;color:#132019">
+      <div style="padding:22px 24px;background:#197a49;color:#fff;border-radius:14px 14px 0 0">
+        <div style="font-size:13px;opacity:.85">CertificadoEnCasa</div>
+        <h1 style="font-size:23px;margin:5px 0 0">Hemos recibido tu solicitud</h1>
+      </div>
+      <div style="padding:24px;border:1px solid #dfe6df;border-top:0;border-radius:0 0 14px 14px;background:#fff">
+        <p>Hola <strong>${escapeHtml(data.name)}</strong>,</p>
+        <p>Tu solicitud de alta como técnico ya está registrada. Ahora revisaremos tus datos profesionales antes de publicar el perfil.</p>
+        <div style="margin:20px 0;padding:16px 18px;background:#f3f8f4;border-radius:12px">
+          <div><strong>Base:</strong> ${escapeHtml(`${data.city}, ${data.province}`)}</div>
+          <div style="margin-top:6px"><strong>Zonas:</strong> ${escapeHtml(data.workZones)}</div>
+          <div style="margin-top:6px"><strong>Precio orientativo desde:</strong> ${data.priceFromEur} €</div>
+        </div>
+        <p>Durante la verificación podremos pedirte la documentación necesaria para comprobar tu habilitación para emitir CEE.</p>
+        <p style="margin-bottom:0">Te enviaremos otro correo cuando tu perfil quede <strong>verificado y publicado</strong>.</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+        "User-Agent": "CertificadoEnCasa/1.0",
+        "Idempotency-Key": `technician-confirmation-${data.id}`,
+      },
+      body: JSON.stringify({
+        from,
+        to: [data.email],
+        subject: "Hemos recibido tu solicitud de alta · CertificadoEnCasa",
+        text,
+        html,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Technician confirmation failed:", response.status, await response.text());
+    }
+  } catch (error) {
+    console.error("Technician confirmation failed:", error);
+  }
+}
+
 export async function POST(request: Request) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -239,22 +314,33 @@ export async function POST(request: Request) {
   const id = savedRows[0]?.id;
 
   if (id) {
-    await sendNotification({
-      id,
-      name,
-      email,
-      phone,
-      postalCode,
-      city,
-      province,
-      qualification,
-      professionalNumber,
-      yearsExperience,
-      workZones,
-      travelRadiusKm,
-      priceFromEur,
-      notes,
-    }, request);
+    await Promise.all([
+      sendNotification({
+        id,
+        name,
+        email,
+        phone,
+        postalCode,
+        city,
+        province,
+        qualification,
+        professionalNumber,
+        yearsExperience,
+        workZones,
+        travelRadiusKm,
+        priceFromEur,
+        notes,
+      }, request),
+      sendTechnicianConfirmation({
+        id,
+        name,
+        email,
+        city,
+        province,
+        workZones,
+        priceFromEur,
+      }),
+    ]);
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });
