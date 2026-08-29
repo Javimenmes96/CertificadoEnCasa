@@ -103,7 +103,8 @@ export default function TechnicianForm() {
 
         <div className="field full">
           <label htmlFor="tech-zones">Zonas donde trabajas *</label>
-          <input id="tech-zones" name="workZones" maxLength={500} placeholder="Ej. Madrid capital, Rivas, Arganda, Coslada…" required />
+          <input id="tech-zones" name="workZones" maxLength={500} placeholder="Ej. Madrid capital, Rivas-Vaciamadrid, Arganda del Rey, CP 28521…" required />
+          <span className="form-note">Indica municipios, provincias completas o códigos postales con precisión. Usaremos este campo para mostrar tu perfil solo a clientes de esas zonas.</span>
         </div>
 
         <div className="field">
