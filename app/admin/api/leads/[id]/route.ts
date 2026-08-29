@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const allowedStatuses = new Set(["new", "contacted", "assigned", "completed", "discarded"]);
+const allowedStatuses = new Set(["new", "contacted", "completed", "discarded"]);
 
 function supabaseHeaders(key: string) {
   const headers: Record<string, string> = {
