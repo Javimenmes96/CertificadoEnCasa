@@ -54,7 +54,7 @@ create table if not exists public.reviews (
   reviewer_name text not null,
   rating smallint not null check (rating between 1 and 5),
   comment text,
-  verified boolean not null default true,
+  verified boolean not null default false,
   status text not null default 'published'
     check (status in ('published', 'hidden'))
 );
@@ -79,7 +79,7 @@ create unique index if not exists leads_review_token_unique_idx
 create index if not exists reviews_technician_created_idx
   on public.reviews (technician_id, created_at desc);
 create index if not exists reviews_public_idx
-  on public.reviews (technician_id, status, verified);
+  on public.reviews (technician_id, status);
 
 create or replace function public.prevent_unavailable_technician_selection()
 returns trigger
@@ -106,38 +106,44 @@ create trigger prevent_unavailable_technician_selection
 before insert or update of selected_technician_id on public.leads
 for each row execute function public.prevent_unavailable_technician_selection();
 
-create or replace function public.validate_verified_review()
+create or replace function public.validate_review_invitation()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  lead_status text;
   lead_technician uuid;
+  invited_at timestamptz;
+  requested_at timestamptz;
 begin
-  select status, selected_technician_id
-    into lead_status, lead_technician
+  select selected_technician_id, review_invited_at, created_at
+    into lead_technician, invited_at, requested_at
   from public.leads
   where id = new.lead_id;
 
-  if lead_status is distinct from 'completed' then
-    raise exception 'Reviews require a completed lead';
-  end if;
-
   if lead_technician is null or lead_technician is distinct from new.technician_id then
-    raise exception 'Review technician does not match completed lead';
+    raise exception 'Review technician does not match request';
   end if;
 
-  new.verified := true;
+  if invited_at is null then
+    raise exception 'Review invitation has not been sent';
+  end if;
+
+  if requested_at > now() - interval '5 days' then
+    raise exception 'Review is not available yet';
+  end if;
+
+  new.verified := false;
   return new;
 end;
 $$;
 
 drop trigger if exists validate_verified_review on public.reviews;
-create trigger validate_verified_review
+drop trigger if exists validate_review_invitation on public.reviews;
+create trigger validate_review_invitation
 before insert on public.reviews
-for each row execute function public.validate_verified_review();
+for each row execute function public.validate_review_invitation();
 
 alter table public.technician_applications enable row level security;
 alter table public.leads enable row level security;
