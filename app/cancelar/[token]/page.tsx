@@ -20,6 +20,42 @@ type LeadRow = {
   billing_status: string;
 };
 
+function CancellationVisual({ success = false }: { success?: boolean }) {
+  const background = success ? "#eef8f0" : "#fff4e5";
+  const foreground = success ? "#2f6b43" : "#b54708";
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: 72,
+        height: 72,
+        borderRadius: 22,
+        display: "grid",
+        placeItems: "center",
+        background,
+        color: foreground,
+        marginBottom: 22,
+      }}
+    >
+      {success ? (
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="m8.5 12.2 2.2 2.2 4.8-5" />
+        </svg>
+      ) : (
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 3.5h7l3.5 3.5v6.2" />
+          <path d="M14 3.5V8h4.5" />
+          <path d="M7 3.5v17h6" />
+          <circle cx="17" cy="17" r="4" />
+          <path d="m15.6 15.6 2.8 2.8M18.4 15.6l-2.8 2.8" />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 async function findLeadByToken(token: string): Promise<{ lead: LeadRow; role: CancellationRole } | null> {
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -76,10 +112,15 @@ export default async function CancelarPage({
       <section className="section">
         <div className="container">
           <div className="panel" style={{ maxWidth: 720, margin: "0 auto" }}>
+            <CancellationVisual success />
             <span className="eyebrow">Cancelación registrada</span>
-            <h1>El encargo ha sido cancelado.</h1>
+            <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", lineHeight: 1.08, marginTop: 14, marginBottom: 20 }}>
+              {found.role === "customer" ? "Cancelación registrada correctamente." : "El encargo ha sido cancelado."}
+            </h1>
             <p className="lead">
-              La cancelación ha quedado registrada y este encargo no se incluirá en una liquidación.
+              {found.role === "customer"
+                ? "Hemos dejado tu solicitud cancelada y no se seguirá gestionando con este técnico. Gracias por indicarnos el motivo."
+                : "La cancelación ha quedado registrada y este encargo no se incluirá en una liquidación."}
             </p>
             {found.role === "customer" ? (
               <Link href="/tecnicos" className="button">Buscar otro técnico</Link>
@@ -123,21 +164,26 @@ export default async function CancelarPage({
         "Otro motivo",
       ];
 
+  const isCustomer = found.role === "customer";
+
   return (
     <section className="section">
       <div className="container">
         <div className="panel" style={{ maxWidth: 720, margin: "0 auto" }}>
+          <CancellationVisual />
           <span className="eyebrow">Cancelar encargo</span>
-          <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", lineHeight: 1.06, marginTop: 14, marginBottom: 20 }}>
-            ¿Este certificado finalmente no se va a realizar?
+          <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", lineHeight: 1.06, marginTop: 14, marginBottom: 20 }}>
+            {isCustomer
+              ? "Lamentamos que finalmente no vayas a realizar el certificado con nosotros"
+              : "¿Este encargo finalmente no se va a realizar?"}
           </h1>
           <p className="lead">
             Solicitud de <strong>{found.lead.property_type}</strong> en <strong>{found.lead.municipality}</strong>.
           </p>
           <p>
-            {found.role === "technician"
-              ? "Si el trabajo no se va a realizar, indícanos el motivo. Mientras siga pendiente, no se contabilizará en tu próxima liquidación."
-              : "Si finalmente no vas a realizar el trabajo con este técnico, indícanos el motivo y dejaremos el encargo cancelado."}
+            {isCustomer
+              ? "Si has decidido no continuar con esta solicitud, indícanos el motivo y dejaremos el encargo cancelado. Tu respuesta nos ayuda a mejorar nuestro servicio."
+              : "Si el trabajo no se va a realizar, indícanos el motivo. Mientras siga pendiente, no se contabilizará en tu próxima liquidación."}
           </p>
 
           {query.error === "reason" && <p className="field-error">Selecciona un motivo de cancelación.</p>}
@@ -160,7 +206,9 @@ export default async function CancelarPage({
                 name="details"
                 maxLength={500}
                 rows={4}
-                placeholder="Opcional. Añade algún detalle si ayuda a explicar la cancelación."
+                placeholder={isCustomer
+                  ? "Opcional. Añade algún detalle si puede ayudarnos a entender la cancelación."
+                  : "Opcional. Añade algún detalle si ayuda a explicar la cancelación."}
               />
             </div>
 
