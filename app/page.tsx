@@ -84,6 +84,13 @@ export default function HomePage() {
               Si el precio es una prioridad, consulta nuestra guía para encontrar {" "}
               <Link href="/certificados-energeticos-baratos">certificados energéticos baratos</Link> comparando profesionales de tu zona.
             </p>
+            <p>
+              ¿Tu inmueble está en la Comunidad de Madrid? Consulta {" "}
+              <Link href="/certificado-energetico-barato-madrid">
+                certificados energéticos baratos en Madrid
+              </Link>{" "}
+              y compara técnicos que trabajen en tu zona.
+            </p>
           </div>
           <div className="panel highlight">
             <span className="eyebrow">Para técnicos</span>
