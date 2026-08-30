@@ -99,6 +99,23 @@ export default function CertificadosEnergeticosBaratosPage() {
 
       <section className="section section-white">
         <div className="container">
+          <div className="panel">
+            <span className="eyebrow">Búsqueda local</span>
+            <h2 style={{ marginTop: 18 }}>¿Necesitas un certificado energético barato en Madrid?</h2>
+            <p className="lead">
+              Hemos preparado una página específica para Madrid con información sobre cómo comparar técnicos por zona, precio orientativo y disponibilidad.
+            </p>
+            <div className="hero-actions">
+              <Link href="/certificado-energetico-barato-madrid" className="button">
+                Certificado energético barato en Madrid
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section section-white">
+        <div className="container">
           <div className="section-heading">
             <span className="eyebrow">Preguntas frecuentes</span>
             <h2 style={{ marginTop: 16 }}>Dudas sobre certificados energéticos económicos</h2>
