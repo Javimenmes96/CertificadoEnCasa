@@ -17,3 +17,6 @@ create unique index if not exists idx_settlements_stripe_invoice_id
 create index if not exists idx_settlements_charge_queue
   on public.settlements (status, scheduled_for)
   where status in ('ready', 'failed', 'charged');
+
+-- El cobro de una liquidación actualiza intentos, estado, IVA y datos de factura.
+grant update on table public.settlements to service_role;
