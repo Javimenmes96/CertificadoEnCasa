@@ -2,33 +2,87 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Certificado energético barato en Madrid | Compara técnicos",
+  title: "Certificados energéticos baratos en Madrid | Compara técnicos",
   description:
-    "Compara técnicos verificados y precios orientativos para encontrar un certificado energético económico en Madrid. Tú eliges al profesional.",
+    "Compara técnicos verificados, zonas de servicio y precios orientativos para encontrar un certificado energético barato en Madrid. Tú eliges al profesional.",
   alternates: {
     canonical: "https://certificadoencasa.com/certificado-energetico-barato-madrid",
   },
   openGraph: {
-    title: "Certificado energético barato en Madrid | CertificadoEnCasa",
+    title: "Certificados energéticos baratos en Madrid | CertificadoEnCasa",
     description:
-      "Busca técnicos que trabajen en Madrid, compara precios orientativos y elige directamente al profesional que prefieras.",
+      "Compara profesionales que trabajan en Madrid, consulta sus precios orientativos y elige directamente al técnico que prefieras.",
     url: "https://certificadoencasa.com/certificado-energetico-barato-madrid",
     type: "website",
   },
 };
 
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Inicio",
+        item: "https://certificadoencasa.com/",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Certificados energéticos baratos",
+        item: "https://certificadoencasa.com/certificados-energeticos-baratos",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: "Certificados energéticos baratos en Madrid",
+        item: "https://certificadoencasa.com/certificado-energetico-barato-madrid",
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: "Comparador de certificados energéticos en Madrid",
+    serviceType: "Certificado de eficiencia energética",
+    areaServed: {
+      "@type": "AdministrativeArea",
+      name: "Comunidad de Madrid",
+    },
+    provider: {
+      "@type": "Organization",
+      name: "CertificadoEnCasa",
+      url: "https://certificadoencasa.com/",
+    },
+    url: "https://certificadoencasa.com/certificado-energetico-barato-madrid",
+    description:
+      "Servicio para comparar técnicos verificados, zonas de trabajo y precios orientativos de certificados energéticos en Madrid.",
+  },
+];
+
 export default function CertificadoEnergeticoBaratoMadridPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+
       <section className="page-hero">
         <div className="container">
+          <p style={{ margin: "0 0 14px", fontSize: 14 }}>
+            <Link href="/">Inicio</Link> · {" "}
+            <Link href="/certificados-energeticos-baratos">Certificados energéticos baratos</Link> · Madrid
+          </p>
           <span className="eyebrow">Certificado energético en Madrid</span>
-          <h1>Certificado energético barato en Madrid: compara técnicos y precios</h1>
+          <h1>Certificados energéticos baratos en Madrid: compara técnicos y precios</h1>
           <p className="lead">
-            Si necesitas un certificado de eficiencia energética en Madrid, puedes comparar profesionales que trabajen en tu zona, consultar sus precios orientativos y elegir tú mismo con quién contactar.
+            Si buscas certificados energéticos baratos en Madrid, compara profesionales que trabajen en la zona, consulta sus precios orientativos y elige tú mismo con quién contactar. Cada técnico fija su propia tarifa.
           </p>
           <div className="hero-actions">
-            <Link href="/tecnicos" className="button">Buscar técnicos en Madrid</Link>
+            <Link href="/tecnicos" className="button">Comparar técnicos en Madrid</Link>
             <Link href="/como-funciona" className="button button-secondary">Cómo funciona</Link>
           </div>
         </div>
@@ -40,7 +94,7 @@ export default function CertificadoEnergeticoBaratoMadridPage() {
             <span className="eyebrow">Compara antes de contratar</span>
             <h2 style={{ marginTop: 16 }}>Cómo encontrar un certificado energético económico en Madrid</h2>
             <p>
-              El precio de un certificado energético no es idéntico para todos los inmuebles. Puede variar según la superficie, el tipo de vivienda o local, la ubicación, el desplazamiento y la tarifa de cada técnico.
+              El precio de un certificado energético en Madrid no es idéntico para todos los inmuebles. Puede variar según la superficie, el tipo de vivienda o local, la ubicación, el desplazamiento y la tarifa de cada técnico. Comparar varias opciones permite decidir con más información.
             </p>
           </div>
 
@@ -100,13 +154,39 @@ export default function CertificadoEnergeticoBaratoMadridPage() {
       <section className="section section-white">
         <div className="container">
           <div className="section-heading">
+            <span className="eyebrow">Precio del CEE en Madrid</span>
+            <h2 style={{ marginTop: 16 }}>¿De qué depende el precio de un certificado energético?</h2>
+            <p>
+              No hay una tarifa única para todos los certificados. Antes de elegir únicamente por precio, comprueba el tipo de inmueble, la zona cubierta por el técnico y las condiciones concretas del servicio. En CertificadoEnCasa puedes comparar esas opciones antes de contactar.
+            </p>
+          </div>
+          <div className="grid-3">
+            <article className="card">
+              <h3>Tipo y tamaño del inmueble</h3>
+              <p>Una vivienda, un local o un inmueble de mayor superficie pueden requerir tiempos de visita y toma de datos diferentes.</p>
+            </article>
+            <article className="card">
+              <h3>Ubicación y desplazamiento</h3>
+              <p>La distancia y la zona de servicio del profesional pueden influir en la tarifa que ofrece para un inmueble concreto.</p>
+            </article>
+            <article className="card">
+              <h3>Tarifa de cada técnico</h3>
+              <p>Los profesionales fijan sus propios precios. Por eso comparar antes de contratar puede ayudarte a encontrar una opción que encaje mejor.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container">
+          <div className="section-heading">
             <span className="eyebrow">Preguntas frecuentes</span>
             <h2 style={{ marginTop: 16 }}>Certificado energético en Madrid: dudas habituales</h2>
           </div>
           <div className="grid-3">
             <article className="card">
               <h3>¿Cuánto cuesta un certificado energético en Madrid?</h3>
-              <p>No existe una tarifa única. El importe depende del inmueble y del profesional. Comparar varias opciones te permite valorar qué precio encaja mejor.</p>
+              <p>No existe una tarifa única. El importe depende del inmueble y del profesional. Comparar varias opciones te permite valorar qué precio y condiciones encajan mejor.</p>
             </article>
             <article className="card">
               <h3>¿Puedo elegir al técnico?</h3>
@@ -120,7 +200,7 @@ export default function CertificadoEnergeticoBaratoMadridPage() {
 
           <div className="hero-actions" style={{ marginTop: 32 }}>
             <Link href="/tecnicos" className="button">Comparar técnicos en Madrid</Link>
-            <Link href="/certificados-energeticos-baratos" className="button button-secondary">Ver certificados energéticos baratos</Link>
+            <Link href="/certificados-energeticos-baratos" className="button button-secondary">Guía de certificados energéticos baratos</Link>
           </div>
         </div>
       </section>
