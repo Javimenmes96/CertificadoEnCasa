@@ -19,10 +19,33 @@ export const metadata: Metadata = {
   },
 };
 
+const siteStructuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "CertificadoEnCasa",
+    url: "https://certificadoencasa.com/",
+    inLanguage: "es-ES",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "CertificadoEnCasa",
+    url: "https://certificadoencasa.com/",
+    logo: "https://certificadoencasa.com/logo-mark.svg",
+    description:
+      "Plataforma para comparar técnicos habilitados, precios orientativos y zonas de servicio para certificados de eficiencia energética.",
+  },
+];
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData) }}
+        />
         <header className="site-header">
           <div className="container nav-wrap">
             <Link href="/" className="brand" aria-label="CertificadoEnCasa">
