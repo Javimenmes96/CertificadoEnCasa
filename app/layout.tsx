@@ -6,9 +6,14 @@ import "./mvp.css";
 import "./marketplace.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://certificadoencasa.com"),
   title: "CertificadoEnCasa | Certificado energético fácil y rápido",
   description:
     "Encuentra técnicos habilitados para tramitar tu certificado de eficiencia energética en España.",
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: "/logo-mark.svg",
   },
@@ -51,6 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <div className="footer-columns">
               <div className="footer-links">
                 <Link href="/como-funciona">Cómo funciona</Link>
+                <Link href="/certificado-energetico-barato-madrid">Certificado energético en Madrid</Link>
                 <Link href="/unete-como-tecnico">Únete como técnico</Link>
                 <Link href="/tecnicos">Pedir certificado</Link>
               </div>
