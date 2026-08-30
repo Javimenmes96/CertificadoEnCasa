@@ -80,6 +80,10 @@ export default function HomePage() {
               <li>Zona de servicio visible</li>
               <li>Contacto directo con el técnico elegido</li>
             </ul>
+            <p>
+              Si el precio es una prioridad, consulta nuestra guía para encontrar {" "}
+              <Link href="/certificados-energeticos-baratos">certificados energéticos baratos</Link> comparando profesionales de tu zona.
+            </p>
           </div>
           <div className="panel highlight">
             <span className="eyebrow">Para técnicos</span>
