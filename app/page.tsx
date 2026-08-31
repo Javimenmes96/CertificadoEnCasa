@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import HomePostalSearch from "./HomePostalSearch";
+import styles from "./heroImage.module.css";
 
 const heroImage = "/hero-certificado-desde-40.png.png";
 
@@ -63,13 +64,13 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="hero-visual">
+          <div className={styles.heroVisual}>
             <Image
               src={heroImage}
               alt="Certificado energético desde 40 euros con técnicos verificados"
               width={1448}
               height={1086}
-              className="hero-illustration"
+              className={styles.heroIllustration}
               sizes="(max-width: 820px) 100vw, 48vw"
               priority
             />
