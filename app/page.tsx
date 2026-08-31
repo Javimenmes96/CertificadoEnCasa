@@ -1,5 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import HomePostalSearch from "./HomePostalSearch";
+
+export const metadata: Metadata = {
+  title: "CertificadoEnCasa | Tu certificado energético desde 40 €",
+  description:
+    "Tu certificado energético desde 40 €. Compara técnicos de tu zona, consulta precios orientativos y elige tú mismo al profesional.",
+  alternates: {
+    canonical: "https://certificadoencasa.com/",
+  },
+  openGraph: {
+    title: "CertificadoEnCasa | Tu certificado energético desde 40 €",
+    description:
+      "Tu certificado energético desde 40 €. Compara técnicos de tu zona, consulta precios orientativos y elige tú mismo al profesional.",
+    url: "https://certificadoencasa.com/",
+    type: "website",
+  },
+};
 
 export default function HomePage() {
   return (
@@ -8,9 +25,9 @@ export default function HomePage() {
         <div className="container hero-grid">
           <div>
             <span className="eyebrow">Certificado energético sin complicaciones</span>
-            <h1>Tu certificado energético, con un técnico de tu zona.</h1>
+            <h1>Tu certificado energético desde 40 €</h1>
             <p className="lead">
-              Indica dónde está el inmueble, compara profesionales verificados que trabajen en esa zona y elige tú mismo con quién quieres hacerlo.
+              Indica dónde está el inmueble, compara profesionales verificados que trabajen en tu zona y elige tú mismo con quién hacerlo.
             </p>
 
             <HomePostalSearch />
@@ -23,6 +40,9 @@ export default function HomePage() {
               <span>Precios orientativos visibles</span>
               <span>Tú eliges al profesional</span>
             </div>
+            <p style={{ marginTop: 14, marginBottom: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+              *Precio desde 40 € para determinados inmuebles y zonas. El precio final depende del tipo de inmueble, superficie, ubicación y tarifa del técnico.
+            </p>
           </div>
 
           <div className="energy-card" aria-label="Cómo se elige un técnico">
