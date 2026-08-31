@@ -1,0 +1,36 @@
+.heroVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.heroIllustration {
+  display: block;
+  width: min(100%, 590px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 22px 34px rgba(23, 44, 35, 0.08));
+}
+
+@media (min-width: 821px) {
+  .heroVisual {
+    margin-right: -18px;
+  }
+
+  .heroIllustration {
+    transform: scale(1.06);
+    transform-origin: center;
+  }
+}
+
+@media (max-width: 820px) {
+  .heroVisual {
+    margin-top: 4px;
+  }
+
+  .heroIllustration {
+    width: min(100%, 560px);
+  }
+}
