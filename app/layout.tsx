@@ -15,7 +15,16 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: "/logo-mark.svg",
+    icon: [
+      { url: "/favicon.ico" },
+      {
+        url: "/favicon-48x48.png",
+        sizes: "48x48",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -32,7 +41,7 @@ const siteStructuredData = [
     "@type": "Organization",
     name: "CertificadoEnCasa",
     url: "https://certificadoencasa.com/",
-    logo: "https://certificadoencasa.com/logo-mark.svg",
+    logo: "https://certificadoencasa.com/apple-touch-icon.png",
     description:
       "Plataforma para comparar técnicos habilitados, precios orientativos y zonas de servicio para certificados de eficiencia energética.",
   },
