@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Certificados energéticos baratos en Madrid | Compara técnicos",
+  title: "Certificados energéticos baratos en Madrid | Desde 40 €",
   description:
-    "Compara técnicos verificados, zonas de servicio y precios orientativos para encontrar un certificado energético barato en Madrid. Tú eliges al profesional.",
+    "Encuentra certificados energéticos baratos en Madrid desde 40 €. Compara técnicos de tu zona, consulta precios orientativos y elige tú mismo al profesional.",
   alternates: {
     canonical: "https://certificadoencasa.com/certificado-energetico-barato-madrid",
   },
   openGraph: {
-    title: "Certificados energéticos baratos en Madrid | CertificadoEnCasa",
+    title: "Certificados energéticos baratos en Madrid | Desde 40 €",
     description:
-      "Compara profesionales que trabajan en Madrid, consulta sus precios orientativos y elige directamente al técnico que prefieras.",
+      "Certificados energéticos en Madrid desde 40 € para determinados inmuebles y zonas. Compara profesionales y elige directamente al técnico que prefieras.",
     url: "https://certificadoencasa.com/certificado-energetico-barato-madrid",
     type: "website",
   },
@@ -77,14 +77,17 @@ export default function CertificadoEnergeticoBaratoMadridPage() {
             <Link href="/certificados-energeticos-baratos">Certificados energéticos baratos</Link> · Madrid
           </p>
           <span className="eyebrow">Certificado energético en Madrid</span>
-          <h1>Certificados energéticos baratos en Madrid: compara técnicos y precios</h1>
+          <h1>Certificados energéticos baratos en Madrid desde 40 €</h1>
           <p className="lead">
-            Si buscas certificados energéticos baratos en Madrid, compara profesionales que trabajen en la zona, consulta sus precios orientativos y elige tú mismo con quién contactar. Cada técnico fija su propia tarifa.
+            Si buscas un certificado energético barato en Madrid, puedes encontrar opciones desde 40 € para determinados inmuebles y zonas. Compara profesionales que trabajen en tu zona, consulta sus precios orientativos y elige tú mismo con quién contactar.
           </p>
           <div className="hero-actions">
             <Link href="/tecnicos" className="button">Comparar técnicos en Madrid</Link>
             <Link href="/como-funciona" className="button button-secondary">Cómo funciona</Link>
           </div>
+          <p style={{ marginTop: 14, marginBottom: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+            *Precio desde 40 € para determinados inmuebles y zonas. El precio final depende del tipo de inmueble, superficie, ubicación, disponibilidad y tarifa del técnico.
+          </p>
         </div>
       </section>
 
@@ -157,7 +160,7 @@ export default function CertificadoEnergeticoBaratoMadridPage() {
             <span className="eyebrow">Precio del CEE en Madrid</span>
             <h2 style={{ marginTop: 16 }}>¿De qué depende el precio de un certificado energético?</h2>
             <p>
-              No hay una tarifa única para todos los certificados. Antes de elegir únicamente por precio, comprueba el tipo de inmueble, la zona cubierta por el técnico y las condiciones concretas del servicio. En CertificadoEnCasa puedes comparar esas opciones antes de contactar.
+              Puedes encontrar opciones desde 40 € en determinados casos, pero no existe una tarifa única para todos los certificados. Antes de elegir únicamente por precio, comprueba el tipo de inmueble, la zona cubierta por el técnico y las condiciones concretas del servicio. En CertificadoEnCasa puedes comparar esas opciones antes de contactar.
             </p>
           </div>
           <div className="grid-3">
@@ -186,7 +189,7 @@ export default function CertificadoEnergeticoBaratoMadridPage() {
           <div className="grid-3">
             <article className="card">
               <h3>¿Cuánto cuesta un certificado energético en Madrid?</h3>
-              <p>No existe una tarifa única. El importe depende del inmueble y del profesional. Comparar varias opciones te permite valorar qué precio y condiciones encajan mejor.</p>
+              <p>Puedes encontrar opciones desde 40 € para determinados inmuebles y zonas. El precio final depende del inmueble, la ubicación y la tarifa del profesional, por lo que conviene comparar varias opciones.</p>
             </article>
             <article className="card">
               <h3>¿Puedo elegir al técnico?</h3>
