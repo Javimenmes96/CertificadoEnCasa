@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import HomePostalSearch from "./HomePostalSearch";
+import HowItWorksSection from "./HowItWorksSection";
 import styles from "./heroImage.module.css";
 
 const heroImage = "/hero-certificado-desde-40.png.png";
@@ -78,20 +79,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section section-white">
-        <div className="container">
-          <div className="section-heading">
-            <span className="eyebrow">Cómo funciona</span>
-            <h2 style={{ marginTop: 16 }}>Tres pasos y tú mantienes el control.</h2>
-            <p>Sin asignarte un técnico al azar.</p>
-          </div>
-          <div className="grid-3">
-            <article className="card"><div className="card-number">1</div><h3>Indica la ubicación</h3><p>Escribe el código postal del inmueble y nosotros identificamos el municipio para mostrarte profesionales que trabajen en esa zona.</p></article>
-            <article className="card"><div className="card-number">2</div><h3>Compara y elige</h3><p>Consulta técnicos verificados, precio orientativo, experiencia y zona de servicio antes de decidir.</p></article>
-            <article className="card"><div className="card-number">3</div><h3>Visita y certificado</h3><p>El técnico elegido recibe tu solicitud, contacta contigo y acuerda directamente la visita y las condiciones del servicio.</p></article>
-          </div>
-        </div>
-      </section>
+      <HowItWorksSection />
 
       <section className="section">
         <div className="container split">
