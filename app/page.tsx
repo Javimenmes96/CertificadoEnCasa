@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import HomePostalSearch from "./HomePostalSearch";
+
+const heroImage = "/hero-certificado-desde-40.png.png";
 
 export const metadata: Metadata = {
   title: "CertificadoEnCasa | Tu certificado energético desde 40 €",
@@ -15,6 +18,21 @@ export const metadata: Metadata = {
       "Tu certificado energético desde 40 €. Compara técnicos de tu zona, consulta precios orientativos y elige tú mismo al profesional.",
     url: "https://certificadoencasa.com/",
     type: "website",
+    images: [
+      {
+        url: `https://certificadoencasa.com${heroImage}`,
+        width: 1448,
+        height: 1086,
+        alt: "Certificado energético desde 40 euros con técnicos verificados",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CertificadoEnCasa | Tu certificado energético desde 40 €",
+    description:
+      "Compara técnicos de tu zona y consigue tu certificado energético desde 40 €.",
+    images: [`https://certificadoencasa.com${heroImage}`],
   },
 };
 
@@ -45,30 +63,16 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="energy-card" aria-label="Cómo se elige un técnico">
-            <div className="energy-top">
-              <div>
-                <span className="tag">Tú mantienes el control</span>
-                <h3 style={{ marginTop: 12 }}>Solo opciones que tengan sentido para tu inmueble</h3>
-                <p style={{ color: "var(--muted)", marginBottom: 0 }}>Sin asignaciones automáticas.</p>
-              </div>
-              <div className="energy-label" aria-hidden="true">
-                <div className="energy-grade">
-                  <span className="grade" />
-                  <span className="grade" />
-                  <span className="grade active" />
-                  <span className="grade" />
-                  <span className="grade" />
-                  <span className="grade" />
-                  <span className="grade" />
-                </div>
-              </div>
-            </div>
-            <div className="quote-box">
-              <div className="quote-row"><span>1. Indica el código postal</span><strong>Tu zona</strong></div>
-              <div className="quote-row"><span>2. Compara perfiles verificados</span><strong>Precio y experiencia</strong></div>
-              <div className="quote-row"><span>3. Elige al que prefieras</span><strong>Tú decides</strong></div>
-            </div>
+          <div className="hero-visual">
+            <Image
+              src={heroImage}
+              alt="Certificado energético desde 40 euros con técnicos verificados"
+              width={1448}
+              height={1086}
+              className="hero-illustration"
+              sizes="(max-width: 820px) 100vw, 48vw"
+              priority
+            />
           </div>
         </div>
       </section>
